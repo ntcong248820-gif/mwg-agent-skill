@@ -1,0 +1,18 @@
+interface:
+  display_name: tgdd infobox nganh hang
+  short_description: 'Viết nội dung Infobox cho trang NGÀNH HÀNG của Thế Giới Di Động
+    (TGDĐ) — tức là các trang danh mục tổng như: Laptop, Điện thoại, Tai nghe, Máy
+    tính bảng, Tivi, Máy ảnh, Loa, Smartwatch... (chỉ có tên ngành hàng, không kèm
+    hãng hay thuộc tính). Kích hoạt khi người dùng nói \"viết infobox trang Laptop\",
+    \"viết mô tả danh mục Điện thoại\", \"infobox trang ngành hàng\", hoặc bất kỳ
+    yêu cầu nào liên quan đến content trang category tổng của TGDĐ mà chủ thể chỉ
+    là tên ngành hàng thuần túy.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

@@ -1,0 +1,18 @@
+interface:
+  display_name: tgdd infobox nganh hang hang
+  short_description: 'Viết nội dung Infobox cho trang NGÀNH HÀNG + HÃNG của Thế Giới
+    Di Động (TGDĐ) — tức là các trang như: Laptop Asus, Laptop Dell, Laptop HP, Điện
+    thoại Samsung, Điện thoại Apple, Tai nghe Sony, TV LG, Máy tính bảng Xiaomi...
+    (kết hợp tên ngành hàng + tên thương hiệu, không có thuộc tính hay dòng sản phẩm
+    cụ thể). Kích hoạt khi người dùng nói \"viết infobox Laptop Dell\", \"infobox
+    trang Samsung\", \"viết mô tả danh mục Laptop Asus\", hoặc bất kỳ yêu cầu content
+    nào cho trang category hãng của TGDĐ.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

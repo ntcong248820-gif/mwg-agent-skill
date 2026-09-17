@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+"""Gọi OpenAI gpt-image-2 tạo ảnh raw 1536x864 (16:9).
+
+Có --reference -> POST /v1/images/edits (giữ sản phẩm thật).
+Không có       -> POST /v1/images/generations (ảnh khái niệm).
+
+API TỐN PHÍ. Chỉ chạy sau khi user đã duyệt cost gate ở Bước 4 của SKILL.md.
+
+Key đọc từ root .env (OPEN_AI_KEY). Script không bao giờ in key ra output.
+"""
+
+import argparse
+import base64
+import json
+import os
+import sys
+import urllib.error
+import urllib.request
+import uuid
+
+MODEL = "gpt-image-2"
+GENERATE_SIZE = "1536x864"
+QUALITY = "medium"
+API_BASE = "https://api.openai.com/v1"
+ENV_KEY_NAME = "OPEN_AI_KEY"
+MAX_REFERENCES = 4
+
+# Ràng buộc cứng khi reference là ảnh sản phẩm thật. Mục đích: đổi bối cảnh
+# nhưng không được đổi bất kỳ chi tiết nhận dạng nào của máy, vì ảnh sai chi
+# tiết đăng lên trang bán hàng là misrepresent sản phẩm.
+PRESERVE_PRODUCT_GUARD = """
+CRITICAL PRODUCT FIDELITY CONSTRAINT — this overrides all style instructions:
+The product in the reference image is a real retail SKU. You MUST reproduce it
+exactly as-is. Keep identical: overall shape and proportions, screen bezel and
+size ratio, keyboard layout, hinge design, port count and placement, brand logo
+shape/position/color, chassis color and material finish, and every visible
+marking. Do NOT redesign, restyle, beautify, straighten, recolor, add, or remove
+any part of the product. Do NOT invent a different model.
+Change ONLY the background environment and the lighting on the scene.
+Replace the plain white background with a realistic, contextual setting that
+matches the article topic. The product must stay the unmodified hero subject.
+""".strip()
+
+# Ràng buộc cứng về ngôn ngữ: Text chủ đạo bắt buộc là tiếng Việt, cấm full tiếng Anh
+VIETNAMESE_TEXT_GUARD = """
+CRITICAL TEXT LANGUAGE CONSTRAINT:
+All headlines, titles, full sentences, panel descriptions, and primary copy rendered inside the image MUST be in Vietnamese language (Tiếng Việt). Common technical terms and loan words (such as 'Arm màn hình', 'OLED', 'Gaming', 'Setup', 'RAM', 'SSD', 'RTX', 'Type-C', 'Hz', 'FPS') are fully allowed, but absolutely NO full English sentences, full English headlines, or purely English-only copy allowed in the generated image.
+""".strip()
+
+
+def find_repo_root(start):
+    """Đi ngược lên tìm thư mục có .env (root workspace)."""
+    current = os.path.abspath(start)
+    while True:
+        if os.path.isfile(os.path.join(current, ".env")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+
+
+def load_api_key():
+    """Đọc OPEN_AI_KEY từ env hoặc root .env. Không in giá trị ra ngoài."""
+    key = os.environ.get(ENV_KEY_NAME)
+    if key:
+        return key.strip()
+
+    root = find_repo_root(os.path.dirname(os.path.abspath(__file__))) or find_repo_root(os.getcwd())
+    if not root:
+        sys.exit(f"ERROR: không tìm thấy .env chứa {ENV_KEY_NAME}.")
+
+    env_path = os.path.join(root, ".env")
+    with open(env_path, "r", encoding="utf-8") as handle:
+        for line in handle:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            name, _, value = line.partition("=")
+            if name.strip() == ENV_KEY_NAME:
+                return value.strip().strip('"').strip("'")
+
+    sys.exit(f"ERROR: {env_path} không có biến {ENV_KEY_NAME}.")
+
+
+def build_multipart(fields, files):
+    """Dựng body multipart/form-data thủ công (tránh phụ thuộc requests)."""
+    boundary = f"----mwgAIImage{uuid.uuid4().hex}"
+    body = bytearray()
+
+    for name, value in fields.items():
+        body.extend(f"--{boundary}\r\n".encode())
+        body.extend(f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode())
+        body.extend(f"{value}\r\n".encode())
+
+    for name, (filename, content, mime) in files:
+        body.extend(f"--{boundary}\r\n".encode())
+        body.extend(
+            f'Content-Disposition: form-data; name="{name}"; filename="{filename}"\r\n'.encode()
+        )
+        body.extend(f"Content-Type: {mime}\r\n\r\n".encode())
+        body.extend(content)
+        body.extend(b"\r\n")
+
+    body.extend(f"--{boundary}--\r\n".encode())
+    return bytes(body), f"multipart/form-data; boundary={boundary}"
+
+
+def guess_mime(path):
+    ext = os.path.splitext(path)[1].lower()
+    if ext in (".jpg", ".jpeg"):
+        return "image/jpeg"
+    if ext == ".webp":
+        return "image/webp"
+    return "image/png"
+
+
+def call_api(url, data, content_type, api_key):
+    request = urllib.request.Request(url, data=data, method="POST")
+    request.add_header("Authorization", f"Bearer {api_key}")
+    request.add_header("Content-Type", content_type)
+    try:
+        with urllib.request.urlopen(request, timeout=300) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")
+        # Không echo header/key, chỉ body lỗi từ phía OpenAI.
+        sys.exit(f"ERROR: OpenAI trả HTTP {exc.code}\n{detail[:1500]}")
+    except urllib.error.URLError as exc:
+        sys.exit(f"ERROR: không gọi được OpenAI: {exc.reason}")
+
+
+def generate(prompt, api_key):
+    payload = json.dumps({
+        "model": MODEL,
+        "prompt": prompt,
+        "size": GENERATE_SIZE,
+        "quality": QUALITY,
+        "n": 1,
+    }).encode()
+    return call_api(f"{API_BASE}/images/generations", payload, "application/json", api_key)
+
+
+def edit(prompt, references, api_key):
+    files = []
+    for path in references:
+        with open(path, "rb") as handle:
+            files.append(("image[]", (os.path.basename(path), handle.read(), guess_mime(path))))
+
+    fields = {
+        "model": MODEL,
+        "prompt": prompt,
+        "size": GENERATE_SIZE,
+        "quality": QUALITY,
+        "n": "1",
+    }
+    body, content_type = build_multipart(fields, files)
+    return call_api(f"{API_BASE}/images/edits", body, content_type, api_key)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--mode", choices=["infobox", "blog"], required=True,
+                        help="Chỉ dùng để ghi metadata; size generate luôn 1536x864")
+    parser.add_argument("--prompt-file", help="File chứa prompt (ưu tiên)")
+    parser.add_argument("--prompt", help="Prompt inline")
+    parser.add_argument("--reference", nargs="*", default=[],
+                        help=f"1-{MAX_REFERENCES} ảnh reference; có thì gọi images/edits")
+    parser.add_argument("--preserve-product", action="store_true",
+                        help="Chèn ràng buộc giữ nguyên sản phẩm thật (bắt buộc khi ref là ảnh SP)")
+    parser.add_argument("--out", required=True, help="File ảnh raw đầu ra (.png)")
+    args = parser.parse_args()
+
+    if args.prompt_file:
+        if not os.path.isfile(args.prompt_file):
+            sys.exit(f"ERROR: không thấy file prompt: {args.prompt_file}")
+        with open(args.prompt_file, "r", encoding="utf-8") as handle:
+            prompt = handle.read().strip()
+        if not prompt:
+            sys.exit(f"ERROR: file prompt rỗng: {args.prompt_file}")
+    elif args.prompt is not None:
+        prompt = args.prompt.strip()
+        if not prompt:
+            sys.exit("ERROR: --prompt rỗng.")
+    else:
+        sys.exit("ERROR: cần --prompt-file hoặc --prompt.")
+
+    if len(args.reference) > MAX_REFERENCES:
+        sys.exit(f"ERROR: tối đa {MAX_REFERENCES} ảnh reference, đang có {len(args.reference)}.")
+
+    for path in args.reference:
+        if not os.path.isfile(path):
+            sys.exit(f"ERROR: không thấy ảnh reference: {path}")
+
+    if args.preserve_product and not args.reference:
+        sys.exit("ERROR: --preserve-product cần ít nhất 1 --reference.")
+
+    if args.preserve_product:
+        prompt = f"{prompt}\n\n{PRESERVE_PRODUCT_GUARD}"
+
+    # Luôn đính kèm ràng buộc ngôn ngữ: text trong ảnh phải là tiếng Việt
+    prompt = f"{prompt}\n\n{VIETNAMESE_TEXT_GUARD}"
+
+    api_key = load_api_key()
+
+    if args.reference:
+        print(f"[gpt-image-2] edits | {len(args.reference)} reference | {GENERATE_SIZE} | {QUALITY}")
+        result = edit(prompt, args.reference, api_key)
+    else:
+        print(f"[gpt-image-2] generations | no reference | {GENERATE_SIZE} | {QUALITY}")
+        result = generate(prompt, api_key)
+
+    data = result.get("data") or []
+    if not data:
+        sys.exit(f"ERROR: OpenAI không trả ảnh. Response keys: {list(result.keys())}")
+
+    b64 = data[0].get("b64_json")
+    if not b64:
+        url = data[0].get("url")
+        if not url:
+            sys.exit("ERROR: response thiếu cả b64_json lẫn url.")
+        with urllib.request.urlopen(url, timeout=120) as resp:
+            binary = resp.read()
+    else:
+        binary = base64.b64decode(b64)
+
+    os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
+    with open(args.out, "wb") as handle:
+        handle.write(binary)
+
+    usage = result.get("usage") or {}
+    print(f"OK raw image -> {args.out} ({len(binary)} bytes)")
+    if usage:
+        print(f"   usage: {json.dumps(usage, ensure_ascii=False)}")
+    if args.preserve_product:
+        print("   NHỚ: phải chạy fidelity gate (Read ảnh, đối chiếu reference) trước khi dùng.")
+
+
+if __name__ == "__main__":
+    main()

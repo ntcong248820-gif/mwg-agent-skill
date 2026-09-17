@@ -1,0 +1,19 @@
+interface:
+  display_name: tgdd infobox dong san pham
+  short_description: 'Viết nội dung Infobox cho trang NGÀNH HÀNG + DÒNG SẢN PHẨM của
+    Thế Giới Di Động (TGDĐ) — tức là các trang như: Laptop Asus ROG, Laptop Asus ROG
+    Strix, Laptop HP EliteBook, Laptop Lenovo ThinkPad, iPhone 16 Series, Samsung
+    Galaxy S25 Series, Tai nghe Sony WH-1000XM Series, MacBook Pro M4 Series... (ngành
+    hàng + tên dòng/series cụ thể của một hãng, không phải tên hãng đơn thuần). Kích
+    hoạt khi người dùng nói \"viết infobox Laptop Asus ROG\", \"infobox trang iPhone
+    16\", \"viết mô tả dòng ThinkPad\", \"infobox Galaxy S25 Series\", hay bất kỳ
+    yêu cầu content nào cho trang dòng sản phẩm cụ thể của TGDĐ.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

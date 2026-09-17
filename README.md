@@ -15,6 +15,31 @@ Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `
 | [`image-seo-pipeline`](skills/image-seo-pipeline) | Nén ảnh, sinh alt text/metadata bằng Gemini, bắn EXIF, ghi CSV metadata | Python, ImageMagick (`magick`), `exiftool`, `GEMINI_API_KEY` |
 | [`seo-keyword-research`](skills/seo-keyword-research) | Research keyword bằng Ahrefs API với bộ lọc intent nghiêm ngặt (tách general/product intent khỏi blog/specs/SKU) | `AHREFS_API_KEY` |
 | [`seo-skill-sync`](skills/seo-skill-sync) | Đồng bộ skill một chiều từ surface canonical ra các surface khác và kiểm parity | Node |
+| [`tgdd-bai-pr-bao-ngoai`](skills/tgdd-bai-pr-bao-ngoai) | Viết bài PR đăng báo (booking PR) giọng kể chuyện 800-1000 chữ, rồi giao ra một thư mục Drive có Google Doc rich text (ảnh inline, link click được) — kèm linter và một gate fact-check bắt buộc | Python, ImageMagick, `gws` CLI |
+| [`seo-gsc-rank-check`](skills/seo-gsc-rank-check) | Lấy thứ hạng keyword từ Google Search Console, chọn URL tốt nhất theo impressions, ghi ngược vào Google Sheet bất kỳ (mọi cột là tham số CLI) | Python, `gws` CLI, MCP `google-search-console` |
+| [`content-html-optimizer`](skills/content-html-optimizer) | Tối ưu HTML bài viết: xếp ảnh vào đúng section, điền alt/title/caption, chèn internal link từ Google Sheet với chống trùng và chống cắt chữ | Python, `gws` CLI |
+| [`image-ai-generate`](skills/image-ai-generate) | Sinh ảnh minh hoạ cho bài bằng OpenAI image API, dùng ảnh sản phẩm làm reference, resize và đóng logo | Python, `OPENAI_API_KEY` |
+| [`tgdd-infobox-nganh-hang`](skills/tgdd-infobox-nganh-hang) | Viết/audit Infobox cho trang ngành hàng tổng | — |
+| [`tgdd-infobox-nganh-hang-hang`](skills/tgdd-infobox-nganh-hang-hang) | Viết/audit Infobox cho trang ngành hàng + hãng | — |
+| [`tgdd-infobox-nganh-hang-thuoc-tinh`](skills/tgdd-infobox-nganh-hang-thuoc-tinh) | Viết/audit Infobox cho trang ngành hàng + thuộc tính | — |
+| [`tgdd-infobox-dong-san-pham`](skills/tgdd-infobox-dong-san-pham) | Viết/audit Infobox cho trang ngành hàng + dòng sản phẩm | — |
+| [`tgdd-review-outline-infobox`](skills/tgdd-review-outline-infobox) | Chấm outline Infobox và so với outline đối thủ để tìm chỗ còn thiếu | — |
+
+
+4 skill `tgdd-infobox-*` và `tgdd-review-outline-infobox` là **bộ rule biên tập**,
+không có script — chúng viết cho ngành hàng và văn phong thương mại điện tử Việt
+Nam, dùng được nhất khi bạn sửa lại cho site của mình.
+
+### Biến môi trường
+
+Vài skill đọc Google Sheet của riêng bạn. Không có ID nào hardcode; script dừng
+kèm thông báo nếu thiếu biến:
+
+| Biến | Skill dùng |
+| --- | --- |
+| `SHEET_ALL_KW_ID`, `SHEET_BAI_TIN_ID` | `content-html-optimizer` |
+| `SPREADSHEET_ID` | `image-ai-generate` |
+| `GWS_EXPECTED_ACCOUNT` | `tgdd-bai-pr-bao-ngoai` (chốt chặn ghi nhầm tài khoản; bỏ trống thì bỏ qua kiểm) |
 
 ## Cài
 

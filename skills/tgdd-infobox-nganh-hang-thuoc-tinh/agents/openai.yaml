@@ -1,0 +1,20 @@
+interface:
+  display_name: tgdd infobox nganh hang thuoc tinh
+  short_description: 'Viết nội dung Infobox cho trang NGÀNH HÀNG + THUỘC TÍNH của
+    Thế Giới Di Động (TGDĐ) — tức là các trang lọc theo đặc điểm/tính năng/phân khúc
+    như: Laptop Gaming, Laptop Văn phòng, Laptop Học sinh Sinh viên, Laptop Màn hình
+    2K, Laptop Siêu mỏng, Điện thoại 5G, Điện thoại Camera tốt, Tai nghe Chống ồn,
+    TV 4K OLED, Máy tính bảng Vẽ tay... (ngành hàng + một thuộc tính/tính năng/use-case,
+    không phải tên hãng hay tên dòng cụ thể). Kích hoạt khi người dùng nói \"viết
+    infobox Laptop Gaming\", \"infobox trang Điện thoại 5G\", \"viết mô tả danh mục
+    Laptop Văn phòng\", hay bất kỳ yêu cầu content nào cho trang filter theo thuộc
+    tính của TGDĐ.'
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true

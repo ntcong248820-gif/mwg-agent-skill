@@ -1,0 +1,101 @@
+{
+  "_doc": "Map prefix URL -> ngành hàng. Dùng cho luật cross-category của check_internal_links.py. Prefix so khớp theo path sau domain, khớp dài nhất thắng. Ngành 'trung-tinh' không bao giờ bị coi là lệch ngành. brand_tokens: nếu segment đích chứa tên hãng thì đích là trang hãng/dòng, token số ngay sau anchor phải hiểu là MÃ ĐỜI chứ không phải đơn vị đo.",
+  "nganh_hang": {
+    "laptop": [
+      "laptop",
+      "macbook"
+    ],
+    "may-in": [
+      "may-in",
+      "muc-in",
+      "giay-in"
+    ],
+    "man-hinh": [
+      "man-hinh"
+    ],
+    "may-tinh-de-ban": [
+      "may-tinh-de-ban",
+      "linh-kien-may-tinh"
+    ],
+    "phan-mem": [
+      "phan-mem"
+    ],
+    "dtdd": [
+      "dtdd",
+      "dien-thoai"
+    ],
+    "may-tinh-bang": [
+      "may-tinh-bang"
+    ],
+    "dong-ho": [
+      "dong-ho-thong-minh",
+      "dong-ho-deo-tay"
+    ],
+    "phu-kien": [
+      "usb",
+      "pin",
+      "tai-nghe",
+      "chuot",
+      "ban-phim",
+      "adapter-sac-sac-nhanh",
+      "sac-cap",
+      "cap-dien-thoai",
+      "tui-chong-soc-balo-laptop",
+      "loa",
+      "may-choi-game-cam-tay",
+      "camera-giam-sat",
+      "the-nho",
+      "o-cung"
+    ]
+  },
+  "trung_tinh": [
+    "hoi-dap",
+    "tin-tuc",
+    "game-app",
+    "",
+    "chinh-sach-bao-hanh-san-pham",
+    "chinh-sach-doi-tra",
+    "khuyen-mai",
+    "tra-gop",
+    "he-thong-sieu-thi",
+    "lien-he"
+  ],
+  "nganh_theo_slug": {
+    "hoidap-top-may-in": "may-in",
+    "hoidap-top-laptop": "laptop",
+    "hoidap-top-4-laptop": "laptop",
+    "gameapp-top-7-laptop": "laptop",
+    "tintuc-top-sp": "laptop",
+    "blog-top-dong-ho": "dong-ho"
+  },
+  "brand_tokens": [
+    "acer",
+    "asus",
+    "hp",
+    "msi",
+    "lenovo",
+    "dell",
+    "canon",
+    "brother",
+    "pantum",
+    "gigabyte",
+    "apple",
+    "macbook",
+    "samsung",
+    "epson",
+    "xiaomi"
+  ],
+  "phu_kien_hop_le": {
+    "_doc": "Đích lệch ngành nhưng KHÔNG bao giờ là bộ phận có sẵn của sản phẩm trong bài, nên link tới đây là lời mời mua thật, không phải nhầm ngữ cảnh. Chỉ thêm khi có ca thật đã đọc câu và xác nhận (xem references/internal-link-qc-cases.md).",
+    "laptop": [
+      "tui-chong-soc-balo-laptop",
+      "phan-mem-windows",
+      "phan-mem-office",
+      "phan-mem"
+    ],
+    "may-in": [
+      "muc-in",
+      "giay-in"
+    ]
+  }
+}
