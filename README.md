@@ -24,6 +24,7 @@ Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `
 | [`tgdd-infobox-nganh-hang-thuoc-tinh`](skills/tgdd-infobox-nganh-hang-thuoc-tinh) | Viết/audit Infobox cho trang ngành hàng + thuộc tính | — |
 | [`tgdd-infobox-dong-san-pham`](skills/tgdd-infobox-dong-san-pham) | Viết/audit Infobox cho trang ngành hàng + dòng sản phẩm | — |
 | [`tgdd-review-outline-infobox`](skills/tgdd-review-outline-infobox) | Chấm outline Infobox và so với outline đối thủ để tìm chỗ còn thiếu | — |
+| [`content-cms-air-infobox`](skills/content-cms-air-infobox) | Đăng bài Infobox lên News CMS: upload ảnh hàng loạt vào thư mục theo News ID, ghi thân bài và verify byte-exact, trả `newsId` cho bài tạo mới | Một tab CMS đã đăng nhập, Chrome DevTools MCP (hoặc tương đương) |
 
 
 4 skill `tgdd-infobox-*` và `tgdd-review-outline-infobox` là **bộ rule biên tập**,
@@ -70,14 +71,19 @@ không có đường sync ngược về canonical, và không bao giờ xoá fil
 
 ## Trước khi chạy skill ghi dữ liệu
 
-`onpage-cms-product-link-insert` **sửa nội dung production**. Nó được viết với
-giả định là hệ CMS không rollback được, nên có sẵn các cổng chặn: backup từng bài
-trước khi ghi, 6 bất biến phải xanh hết mới POST, đọc lại sát trước khi ghi để
-không đè người đang sửa tay, và verify byte-exact sau khi ghi.
+`onpage-cms-product-link-insert` và `content-cms-air-infobox` **sửa nội dung
+production**. Cả hai được viết với giả định là hệ CMS không rollback được, nên có
+sẵn các cổng chặn: backup từng bài trước khi ghi, bộ bất biến phải xanh hết mới
+POST, đọc lại sát trước khi ghi để không đè người đang sửa tay, và verify
+byte-exact sau khi ghi.
 
 Đừng bỏ các cổng đó để chạy nhanh hơn. Chạy `dryRun: true` một lô nhỏ trước.
 
-Skill này mô tả hợp đồng endpoint của một CMS nội bộ. Nó **không** chứa
+Riêng `content-cms-air-infobox` còn upload ảnh lên CDN, và **ảnh đã lên CDN thì
+không xoá được** — tên file trùng là mất vĩnh viễn tên đó. Kiểm HEAD 404 trước
+khi upload, và đặt tên file có tiền tố từ khoá của bài.
+
+Hai skill này mô tả hợp đồng endpoint của một CMS nội bộ. Chúng **không** chứa
 credential và không tự đăng nhập — phải có sẵn một phiên đăng nhập hợp lệ do bạn
 tự mở.
 
