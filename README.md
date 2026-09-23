@@ -24,7 +24,10 @@ Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `
 | [`tgdd-infobox-nganh-hang-thuoc-tinh`](skills/tgdd-infobox-nganh-hang-thuoc-tinh) | Viết/audit Infobox cho trang ngành hàng + thuộc tính | — |
 | [`tgdd-infobox-dong-san-pham`](skills/tgdd-infobox-dong-san-pham) | Viết/audit Infobox cho trang ngành hàng + dòng sản phẩm | — |
 | [`tgdd-review-outline-infobox`](skills/tgdd-review-outline-infobox) | Chấm outline Infobox và so với outline đối thủ để tìm chỗ còn thiếu | — |
-| [`content-cms-air-infobox`](skills/content-cms-air-infobox) | Đăng bài Infobox lên News CMS: upload ảnh hàng loạt vào thư mục theo News ID, ghi thân bài và verify byte-exact, trả `newsId` cho bài tạo mới | Một tab CMS đã đăng nhập, Chrome DevTools MCP (hoặc tương đương) |
+| [`content-cms-air-infobox`](skills/content-cms-air-infobox) | Đăng bài Infobox lên CMS, 2 mode: `--news` cho trang Filter/dòng (có thể tạo bài mới trả `newsId`) và `--brand` cho trang Hãng. Upload ảnh hàng loạt, ghi thân bài và verify byte-exact | Một tab CMS đã đăng nhập, Chrome DevTools MCP (hoặc tương đương) |
+| [`onpage-cms-news-insert`](skills/onpage-cms-news-insert) | Chèn hàng loạt một câu kèm internal link (hoặc biên tập nội dung) vào bài Tin tức/Kinh nghiệm hay/Tekzone trên CMS, splice trên string thô, giữ nguyên taxonomy + trạng thái xuất bản, verify byte-exact | Một tab CMS đã đăng nhập |
+| [`onpage-internal-link`](skills/onpage-internal-link) | Đề xuất chèn internal link vào bài Hỏi đáp/Game App hoặc Kinh nghiệm hay: crawl bài live, chọn đúng đoạn văn theo chủ đề (rải đều vị trí, không dồn cuối bài), viết câu mention tự nhiên, điền sheet WF đi link | Python (bs4), `gws` CLI, 1-2 Google Sheet của riêng bạn |
+| [`tgdd-top-product-article`](skills/tgdd-top-product-article) | Viết mới/renew bài "Top N sản phẩm": verify sản phẩm còn kinh doanh bằng script (không cần mở browser), dựng source HTML chuẩn CMS, chèn shortcode `[sosanh]`/`[Product_Promotion]`, validate 21 check trước khi giao | Python (bs4), dùng chung với `content-html-optimizer` |
 
 
 4 skill `tgdd-infobox-*` và `tgdd-review-outline-infobox` là **bộ rule biên tập**,
@@ -38,9 +41,11 @@ kèm thông báo nếu thiếu biến:
 
 | Biến | Skill dùng |
 | --- | --- |
-| `SHEET_ALL_KW_ID`, `SHEET_BAI_TIN_ID` | `content-html-optimizer` |
+| `SHEET_ALL_KW_ID`, `SHEET_BAI_TIN_ID` | `content-html-optimizer`, `tgdd-top-product-article` (box "Xem thêm" dùng chung `SHEET_BAI_TIN_ID`) |
 | `SPREADSHEET_ID` | `image-ai-generate` |
 | `GWS_EXPECTED_ACCOUNT` | `tgdd-bai-pr-bao-ngoai` (chốt chặn ghi nhầm tài khoản; bỏ trống thì bỏ qua kiểm) |
+| `SHEET_GAME_APP_ID`, `SHEET_KINH_NGHIEM_HAY_ID` | `onpage-internal-link` (2 hệ sheet WF đi link) |
+| `SHEET_SHORTCODE_MAU_ID` | `tgdd-top-product-article` (sheet mẫu `categoryid`/`properties` cho shortcode `[sosanh]`) |
 
 ## Cài
 

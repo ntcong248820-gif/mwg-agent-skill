@@ -1,6 +1,6 @@
 ---
 name: tgdd-bai-pr-bao-ngoai
-description: "Viết bài báo PR (booking PR) cho MWG/TGDĐ đăng trên báo ngoài như VnExpress, Kenh14, Thanh Niên, Dân Trí, Tiền Phong. Chuẩn 800-1000 chữ, title giật tít, giọng reviewer kể chuyện ngôi thứ nhất, tối thiểu 2 ảnh 2048x1150, internal link chỉ chèn trong đoạn văn. Bài bắt buộc qua gate verify thông tin bằng subagent trước khi giao. Giao hàng là một thư mục Google Drive chứa Google Doc rich text (ảnh chèn inline, link click được) và file ảnh gốc. Dùng khi user nói: viết bài PR, bài báo PR, booking PR, bài đăng báo, bài PR laptop, viết bài cho VnExpress/Kenh14, bài advertorial, bài PR sản phẩm."
+description: "Viết bài báo PR (booking PR) cho MWG/TGDĐ đăng trên báo ngoài như VnExpress, Kenh14, Thanh Niên, Dân Trí, Tiền Phong. Chuẩn 800-1000 chữ, title giật tít, giọng reviewer công nghệ gần gũi, tâm sự thân mật xoay quanh sản phẩm (tuyệt đối không xưng 'tôi', không biến thành bài review cá nhân), tối thiểu 2 ảnh 2048x1150, internal link chỉ chèn trong đoạn văn. Bài bắt buộc qua gate verify thông tin bằng subagent trước khi giao. Giao hàng là một thư mục Google Drive chứa Google Doc rich text (ảnh chèn inline, link click được) và file ảnh gốc. Dùng khi user nói: viết bài PR, bài báo PR, booking PR, bài đăng báo, bài PR laptop, viết bài cho VnExpress/Kenh14, bài advertorial, bài PR sản phẩm."
 user-invocable: true
 when_to_use: "Trigger: viết bài PR, bài báo PR, booking PR, bài đăng báo ngoài, advertorial, bài PR sản phẩm, viết bài cho VnExpress/Kenh14/Thanh Niên, sửa bài PR, audit bài PR."
 category: content
@@ -62,8 +62,11 @@ context ngay từ đầu — mở đúng tài liệu ở đúng bước.
    đếm được, không ước lượng — `scripts/check-article.py` chặn nếu lệch.
 2. **Title phải giật tít mà không nói sai sự thật.** Tít hứa điều gì thì thân
    bài phải trả điều đó. Tít hứa hụt là lý do bên báo trả bài.
-3. **Giọng reviewer kể chuyện, ngôi thứ nhất.** Người đọc phải có cảm giác đang
-   nghe một người đã dùng thật kể lại, không phải đọc thông cáo báo chí.
+3. **Giọng reviewer thân mật, lấy sản phẩm làm trung tâm.** Tuyệt đối không
+   xưng "tôi", không biến bài báo thành nhật ký review cá nhân của tác giả.
+   Người đọc có cảm giác đang lắng nghe một reviewer am hiểu công nghệ phân
+   tích thực tế, tinh tế, chia sẻ sâu về sản phẩm và giá trị thực tế cho người dùng,
+   không phải đọc thông cáo báo chí cứng nhắc.
 4. **Tối thiểu 2 ảnh**, mỗi ảnh 2048x1150, mỗi ảnh bắt buộc có caption. Mặc
    định lấy ảnh tự do trên mạng. Khi user chỉ định nguồn thì **chỉ** lấy từ
    nguồn đó, không lấy chỗ khác rồi báo là đã lấy đúng nguồn.

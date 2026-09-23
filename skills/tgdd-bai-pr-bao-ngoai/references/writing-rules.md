@@ -1,35 +1,42 @@
 # Quy tắc viết và giọng văn
 
-## Giọng gốc: người đã dùng thật đang kể lại
+## Trọng tâm xoay quanh sản phẩm, giọng reviewer gần gũi, cấm xưng "tôi"
 
-Người đọc phải có cảm giác đang nghe một người kể chuyện của họ, không phải đọc
-bài giới thiệu sản phẩm. Đây là điểm khác lớn nhất giữa bài PR báo ngoài và
-Infobox trên site.
+Bài PR đăng trên báo ngoài (đối tác như Cafef, Soha, Thethao247, Vietbao, VNReview...)
+phải đọc như một bài báo công nghệ chất lượng cao do phóng viên hoặc reviewer có nghề
+chắp bút, **không phải bài blog cá nhân** và **không phải tờ rơi quảng cáo**.
 
-- Xưng **"tôi"**, gọi người đọc là **"bạn"**.
-- Kể theo **dòng thời gian có thật**: trước khi đổi, lúc chọn, tuần đầu, ba tuần
-  sau. Mốc thời gian làm câu chuyện có thật hơn mọi tính từ.
-- Nói cả thứ **không hài lòng**. Bài khen từ đầu đến cuối là bài quảng cáo, và
-  người đọc nhận ra trong ba mươi giây.
-- Đưa **chi tiết nhỏ cụ thể** thay vì tính từ lớn: "bớt nheo mắt vào buổi chiều"
-  ăn đứt "trải nghiệm thị giác vượt trội".
+- **TUYỆT ĐỐI KHÔNG xưng "tôi":** Không dùng "tôi", "tôi nghĩ", "tôi chọn", "theo tôi",
+  "máy cũ của tôi", "kinh nghiệm của tôi". Bài viết không phải là nhật ký cá nhân của tác giả.
+- **Lấy sản phẩm làm trung tâm:** Chủ thể của câu văn là **sản phẩm** (chiếc máy, tấm nền,
+  vi xử lý, cụm camera, buồng hơi tản nhiệt, thời lượng pin...) hoặc hướng tới **người dùng**
+  ("người dùng", "chúng ta", "bạn", "giới công nghệ", "người mua").
+- **Giọng reviewer công nghệ thân mật:** Tự nhiên, gần gũi, chia sẻ kinh nghiệm sử dụng
+  thực tế, tinh tế trong quan sát, nhưng giữ góc nhìn phân tích khách quan và chuyên nghiệp.
+- **Nói cả điểm phải đánh đổi:** Bài khen từ đầu đến cuối là tờ rơi quảng cáo mà người đọc
+  sẽ nhận ra ngay. Chỉ ra những điểm cần cân nhắc (thân máy lớn cần dùng hai tay, trọng lượng
+  đầm hơn, máy ấm nhẹ khi sạc nhanh công suất lớn) tạo sự tin cậy tuyệt đối cho bài viết.
+- **Đưa chi tiết nhỏ cụ thể thay vì tính từ chung chung:** "bớt nheo mắt dưới nắng gắt ban trưa",
+  "nhiệt lượng phân tán đều không gắt tay", "vuốt chạm mượt mà" ăn đứt các mỹ từ sáo rỗng
+  như "trải nghiệm thị giác đỉnh cao" hay "thiết kế sang trọng vượt bậc".
 
 ## Ba thứ phải có trong mọi bài
 
-1. **Một tình huống mở đầu người đọc tự nhận ra mình trong đó.** Không mở bài
-   bằng định nghĩa hay bối cảnh thị trường.
-2. **Ít nhất một điều tác giả đánh giá sai.** Đây là thứ tạo độ tin. Bài không
-   có nó đọc như thông cáo.
-3. **Một câu chốt rút ra được.** Người đọc phải mang được gì đó về.
+1. **Một tình huống thực tế người đọc tự nhận ra nhu cầu của mình:** Không mở bài bằng
+   định nghĩa giáo điều hay bối cảnh thị trường xa vời.
+2. **Ít nhất một điểm đánh đổi hoặc chi tiết cần lưu ý:** Tạo chiều sâu và độ tin cậy
+   cho bài phân tích.
+3. **Một giá trị thực tế đúc kết được cho người đọc:** Giúp người mua hiểu rõ sản phẩm
+   giải quyết được bài toán gì cho cuộc sống hoặc công việc của họ.
 
 ## Không viết như thông cáo báo chí
 
 | Đừng viết | Viết là |
 | --- | --- |
-| "Sản phẩm sở hữu thiết kế sang trọng" | "Máy nhẹ hơn máy cũ của tôi khoảng nửa ký, và tôi thấy rõ điều đó sau một ngày đeo balo" |
-| "Đáp ứng mọi nhu cầu của người dùng" | "Với việc soạn thảo và bảng tính của tôi thì thừa sức" |
-| "Mang đến trải nghiệm vượt trội" | "Tôi ngừng hẳn thói quen vừa mở file vừa đi pha cà phê" |
-| "Với mức giá vô cùng hấp dẫn" | "Tôi chia ra trả góp, mỗi tháng nhẹ hơn tôi tưởng" |
+| "Sản phẩm sở hữu thiết kế sang trọng" | "Khung viền titan hoàn thiện satin giúp thân máy nhẹ hơn nửa lạng, tạo cảm giác cầm nắm thoải mái suốt ngày dài" |
+| "Đáp ứng mọi nhu cầu của người dùng" | "Với các tác vụ văn phòng, duyệt bảng tính lớn và họp trực tuyến liên tục, máy vận hành mượt mà và không có độ trễ" |
+| "Mang đến trải nghiệm vượt trội" | "Thời gian mở tài liệu nặng và render video rút ngắn rõ rệt, loại bỏ hoàn toàn cảm giác sốt ruột phải chờ đợi" |
+| "Với mức giá vô cùng hấp dẫn" | "Chính sách trả góp không lãi suất giúp bài toán tài chính trở nên nhẹ nhàng hơn nhiều cho người mua" |
 
 Cấm dùng khi không có tiêu chí và số liệu: "tốt nhất", "số 1", "hoàn hảo",
 "vượt trội hoàn toàn", "đỉnh cao", "cực kỳ ấn tượng".
@@ -50,16 +57,15 @@ Bài đăng báo ngoài. Nhắc tên nhiều là bên báo cắt, và người �
 
 - Nhắc **"Thế Giới Di Động" tối đa 3-4 lần** trong cả bài.
 - **Không nhắc trong title và sapo.**
-- Lần nhắc đầu tiên nên rơi vào **nửa sau bài**, khi người đọc đã có lý do quan
-  tâm.
-- Nhắc trong ngữ cảnh người kể đang làm gì, không nhắc như đang giới thiệu:
+- Lần nhắc đầu tiên nên rơi vào **nửa sau bài**, khi người đọc đã có lý do quan tâm.
+- Nhắc trong ngữ cảnh giải pháp mua sắm, không nhắc như đang giới thiệu:
   - Sai: "Thế Giới Di Động hiện đang có chương trình trả góp 0% hấp dẫn."
-  - Nên: "Tôi chọn trả góp không lãi thay vì dồn một cục, nên khoản này nhẹ hơn
-    tôi tưởng."
+  - Nên: "Hình thức trả góp không lãi suất tại các chuỗi bán lẻ lớn như Thế Giới Di Động
+    giúp người dùng dễ dàng nâng cấp máy mà không phải chịu áp lực tài chính ban đầu."
 
 ## Ngôn ngữ đơn giản
 
-Ưu tiên từ người mua dùng hằng ngày.
+Ưu tiên từ ngữ người mua dùng hằng ngày.
 
 | Tránh | Dùng |
 | --- | --- |
@@ -76,7 +82,7 @@ thẳng tên, không mở ngoặc giải thích lại.
 
 ## Viết thành câu hoàn chỉnh
 
-Mỗi ý là một câu có chủ ngữ, đọc lên nghe như người đang nói.
+Mỗi ý là một câu có chủ ngữ, đọc lên nghe mạch lạc như reviewer đang đàm đạo cùng độc giả.
 
 Sai, dồn nhiều mệnh đề mất chủ ngữ:
 
@@ -84,13 +90,17 @@ Sai, dồn nhiều mệnh đề mất chủ ngữ:
 
 Nên:
 
-> Máy mới nhanh hơn hẳn, nhưng thứ tôi thấy rõ nhất lại là màn hình sáng hơn.
-> Bàn phím cũng sâu hơn một chút, đủ để tôi gõ cả ngày mà không mỏi tay.
+> Máy mới cho tốc độ phản hồi nhanh hơn hẳn, nhưng điểm dễ nhận thấy nhất mỗi ngày lại
+> là màn hình sáng rõ hơn khi ra ngoài trời. Hành trình phím sâu và độ nảy tốt cũng
+> giúp việc gõ văn bản liên tục trong nhiều giờ không bị mỏi tay.
 
 **Không lạm dụng dấu hai chấm.** Trong đoạn văn xuôi tối đa một dấu `:`. Không
-dùng `:` thay động từ — viết "máy có màn 15,6 inch", không viết "màn hình: 15,6
-inch".
+dùng `:` thay động từ — viết "máy có màn 15,6 inch", không viết "màn hình: 15,6 inch".
 
 ## Cách kiểm nhanh
 
-Đọc to cả bài lên. Nếu có đoạn nào nghe như đang đọc tờ rơi, viết lại đoạn đó.
+Đọc to cả bài lên:
+1. Có từ **"tôi"** nào xuất hiện không? Nếu có, xóa bỏ và viết lại câu lấy sản phẩm hoặc người dùng làm chủ ngữ.
+2. Bài viết có **xoay quanh sản phẩm** không, hay lại trôi về cảm xúc cá nhân của người viết?
+3. Có đoạn nào nghe như đang đọc tờ rơi quảng cáo không? Nếu có, viết lại đoạn đó.
+

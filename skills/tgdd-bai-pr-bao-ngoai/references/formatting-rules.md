@@ -42,21 +42,22 @@ khác nhau thì đó là chỗ xuống dòng.
 
 - Heading là **câu có thông tin**, không phải nhãn.
   - Nhạt: "Về màn hình", "Ưu điểm", "Kết luận"
-  - Được: "Thứ không nhạt đi là màn hình", "Một khoản tôi tiêu hơi phí"
+  - Được: "Không gian 6,9 inch thay đổi trải nghiệm đọc tài liệu", "Buồng hơi tản nhiệt giữ vững hiệu năng tải nặng"
 - Dài 5-12 chữ.
 - **Không chèn link vào heading.** Không ngoại lệ.
-- Heading tiếp nối mạch kể, đọc riêng dãy heading phải ra được cốt truyện.
+- **Tuyệt đối không dùng ngôi xưng "tôi" trong heading.**
+- Heading tiếp nối mạch phân tích, đọc riêng dãy heading phải thấy rõ các luận điểm chính.
 
 ## Không dùng bullet và bảng
 
-Bài PR báo ngoài là **bài kể chuyện**, không phải bài tư vấn mua hàng.
+Bài PR báo ngoài là **bài phân tích báo chí liền mạch**, không phải bài tư vấn mua hàng dạng liệt kê.
 
 - Không dùng checklist gạch đầu dòng.
 - Không dùng bảng so sánh.
 - Không dùng nhãn in đậm đầu đoạn để giả làm danh sách.
 
-Có nhiều ý song song thì viết thành các đoạn liền mạch có từ nối ("Thứ hai là...",
-"Ngược lại...", "Còn một thứ nữa..."). Đó là cách các bài trên VnExpress và Thanh
+Có nhiều ý song song thì viết thành các đoạn liền mạch có từ nối ("Khác biệt lớn thứ hai là...",
+"Ngược lại...", "Một chi tiết phần cứng đáng chú ý khác..."). Đó là cách các bài trên VnExpress và Thanh
 Niên làm, và là lý do bài đọc như bài báo chứ không như slide.
 
 ## Vị trí ảnh
@@ -70,15 +71,16 @@ Niên làm, và là lý do bài đọc như bài báo chứ không như slide.
 
 1-2 đoạn cuối, không có heading riêng.
 
-- Quay lại câu chuyện mở đầu để khép vòng.
-- Nêu điều rút ra, viết như lời khuyên thật của người kể.
+- Đúc kết lại vấn đề đã đặt ra ở phần mở bài để khép vòng.
+- Nêu giá trị thực tế mang lại cho người dùng, viết tự nhiên như lời khuyên từ reviewer có tâm.
+- **Tuyệt đối không xưng "tôi" trong đoạn chốt.**
 - **Không kết bằng lời kêu gọi mua hàng.** Bài báo ngoài không kết bằng CTA;
-  thông tin mua hàng nếu có thì nằm tự nhiên trong đoạn áp chót.
+  thông tin mở bán hoặc giải pháp thanh toán nếu có thì nằm tự nhiên trong đoạn áp chót.
 
 Sai:
 
-> Hãy đến ngay Thế Giới Di Động để sở hữu chiếc laptop ưng ý với giá tốt nhất!
+> Hãy đến ngay Thế Giới Di Động để sở hữu chiếc máy ưng ý với giá tốt nhất!
 
 Nên:
 
-> Tổng kết lại sau ba tuần, tôi tiếc duy nhất một điều là đã chần chừ quá lâu.
+> Nhìn nhận tổng thể, mức chênh lệch chi phí ban đầu sẽ hoàn toàn xứng đáng nếu người dùng thực sự cần một không gian hiển thị rộng rãi và thời lượng pin bền bỉ cho nhịp độ công việc di động mỗi ngày.

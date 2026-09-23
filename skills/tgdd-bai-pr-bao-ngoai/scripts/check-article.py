@@ -25,6 +25,7 @@ LINKABLE = {"p"}
 
 BODY_TYPES = ("sapo", "h2", "h3", "p")
 URL_IN_TEXT = re.compile(r"https?://\S+")
+FIRST_PERSON_PATTERN = re.compile(r"\b[Tt]ôi\b")
 
 
 def words(text):
@@ -88,6 +89,13 @@ def check(article):
             if not link.get("url", "").startswith(("http://", "https://")):
                 errors.append("Block %d: link %r has no absolute URL."
                               % (index, link["text"]))
+
+        block_text = block.get("text", "") or block.get("caption", "")
+        if FIRST_PERSON_PATTERN.search(block_text):
+            errors.append(
+                "Block %d (%s) carries first-person 'tôi'. PR articles must center on "
+                "the product and user benefits, never first-person 'tôi'."
+                % (index, kind))
 
         if kind in ("p", "sapo") and URL_IN_TEXT.search(block.get("text", "")):
             errors.append("Block %d prints a raw URL; use an anchored link." % index)

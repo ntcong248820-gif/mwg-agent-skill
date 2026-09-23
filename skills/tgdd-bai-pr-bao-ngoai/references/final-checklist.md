@@ -28,11 +28,13 @@ Hết `ERROR` mới đi tiếp. Những mục dưới đây là thứ script **k
 
 ## Giọng văn
 
-- [ ] Xưng "tôi", gọi người đọc là "bạn", xuyên suốt bài.
-- [ ] Có mốc thời gian thật trong mạch kể.
-- [ ] Có **ít nhất một điều người kể đánh giá sai hoặc không hài lòng**.
-- [ ] Có một câu chốt rút ra được.
-- [ ] Không câu nào đọc như thông cáo báo chí.
+- [ ] Tuyệt đối KHÔNG xưng "tôi" trong title, sapo hay thân bài; không biến bài viết thành nhật ký review cá nhân.
+- [ ] Trọng tâm bài viết xoay quanh sản phẩm, tính năng, hiệu năng và giá trị thực tế cho người dùng.
+- [ ] Giọng reviewer am hiểu công nghệ, tâm sự thân mật, tinh tế và khách quan.
+- [ ] Có chi tiết trải nghiệm thực tế (cảm giác cầm nắm, nhiệt độ, độ sáng ngoài nắng, pin cả ngày).
+- [ ] Có ít nhất một điểm đánh đổi hoặc chi tiết cần lưu ý để tạo độ tin cậy.
+- [ ] Có một câu chốt rút ra được cho người mua.
+- [ ] Không câu nào đọc như thông cáo báo chí khô khan.
 - [ ] Không dùng "tốt nhất", "số 1", "hoàn hảo", "vượt trội" thiếu căn cứ.
 - [ ] Không câu nào nhắc nơi lấy tin ("theo trang chủ hãng", "theo một số nguồn").
 - [ ] Thuật ngữ khó chỉ giải thích một lần.

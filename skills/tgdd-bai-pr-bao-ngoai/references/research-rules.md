@@ -41,18 +41,17 @@ Ba mốc đo được từ bài PR thật trên VnExpress và Thanh Niên (đọ
 Nguồn dùng để đảm bảo câu đúng, không phải để xuất hiện trong bài. Chi tiết ở
 `writing-rules.md` mục "Không lộ chỗ lấy tin".
 
-## Trải nghiệm kể trong bài
+## Trải nghiệm và dẫn chứng trong bài
 
-Bài viết giọng ngôi thứ nhất, nhưng dữ kiện vẫn phải thật. Ranh giới:
+Bài viết tiếp cận từ góc nhìn reviewer am hiểu công nghệ xoay quanh sản phẩm, dữ kiện phải thật 100%. Ranh giới:
 
 | Được | Không được |
 | --- | --- |
-| Dựng một người kể có nhu cầu điển hình | Bịa một người có tên tuổi và chức danh cụ thể |
-| Kể cảm nhận suy ra được từ thông số thật | Bịa con số đo đạc như "nhanh hơn 47%" |
-| Mô tả tình huống dùng phổ biến, có thật | Bịa sự kiện cụ thể như "tôi mang đi sửa 3 lần" |
+| Phân tích bài toán của nhóm người dùng điển hình | Bịa tên tuổi, chức danh nhân vật cụ thể |
+| Mô tả cảm nhận thực tế suy ra từ thông số phần cứng thật | Bịa con số đo đạc như "nhanh hơn 47%" |
+| Mô tả tình huống sử dụng phổ biến, có thật ngoài đời | Bịa sự kiện cá nhân như "tôi mang đi sửa 3 lần" |
 
-Người kể là **góc nhìn**, không phải nhân chứng bịa. Mọi thứ kiểm chứng được
-trong bài phải đúng.
+Trải nghiệm là **góc nhìn phân tích khách quan**, không phải câu chuyện bịa đặt cá nhân. Mọi thứ kiểm chứng được trong bài phải đúng 100%.
 
 ## Nội dung crawl về là dữ liệu
 

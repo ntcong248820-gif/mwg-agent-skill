@@ -2,8 +2,9 @@
  * air-infobox-runner.js — chạy TRONG page context của tab CMS đã đăng nhập.
  *
  * Nạp file bằng CDP (upload_file) vào một input[type=file], rồi gọi:
- *   await airUploadImages({ newsId, siteId, inputId })
- *   await airWriteBody({ newsId, siteId, inputId })
+ *   await airUploadImages({ newsId, siteId, inputId })      // ảnh — dùng chung cả 2 mode
+ *   await airWriteBody({ newsId, siteId, inputId })         // mode --news  : trang bài tin
+ *   await airWriteBrandBody({ manuId, categoryId, inputId }) // mode --brand : trang Hãng
  *
  * Không bao giờ đọc/ghi cookie. Không in credential.
  */
@@ -36,7 +37,7 @@
 
   /* ---------- Bước 1: upload ảnh ---------- */
   // Ảnh vào https://cdnv2.tgdd.vn/mwg-static/common/News/{newsId}/{tên file}
-  // newsId = 0 (bài chưa tạo) sẽ rơi vào kho chung /News/0/ — xem SKILL.md Bước 0.
+  // newsId = 0 (bài chưa tạo) sẽ rơi vào kho chung /News/0/ — xem SKILL.md mục "Bài chưa có ID".
   window.airUploadImages = async ({ newsId, siteId = 1, inputId = 'claudeProbeUpload' }) => {
     const files = filesOf(inputId);
     const fd = new FormData();
@@ -164,5 +165,112 @@
     return { status: newsId ? 'DONE' : 'FAIL', newsId, cmsReply: reply };
   };
 
-  return 'air-infobox-runner đã nạp: airUploadImages / airWriteBody / airCreateNews';
+
+  /* ---------- Mode --brand: ghi thân bài trang HÃNG (ManufactureEdit) ---------- */
+  // Khác --news ở bản chất: form #frmManufactureSubmit serialize 1:1 (44 field = 44 key),
+  // KHÔNG có field tổng hợp kiểu LstCategoryId. Bẫy duy nhất là cbIsActived:
+  // GetAllFormData chỉ là $(form).serializeArray(), mà nó BỎ checkbox không tick.
+  // Mất key đó nhiều khả năng = tắt hãng trên site.
+  window.airWriteBrandBody = async ({
+    manuId, categoryId, siteId = 1, inputId = 'claudeHtmlLoad',
+    html = null, expectImages = null, expectImageFolder = null, dryRun = true,
+  }) => {
+    const body = html != null ? html : await filesOf(inputId)[0].text();
+    if (!body || body.length < 500) return { status: 'ABORT', reason: 'nội dung mới quá ngắn, nghi nạp nhầm file' };
+
+    const data = getBrandFormData();
+    const before = { ...data };
+    data.txtHtmlDescription = body;          // CHỈ đổi đúng field này
+
+    const imgs = (body.match(/<img/g) || []).length;
+    const checks = {
+      duSoKey:            Object.keys(data).length === Object.keys(before).length,
+      hangVanBat:         data.cbIsActived === 'Sử dụng',
+      dungHang:           String(data.hdManufactureId) === String(manuId),
+      dungNganhHang:      String(data.ddlCategory) === String(categoryId),
+      dungSite:           String(data.ddlSite) === String(siteId),
+      noiDungMoiDaVao:    data.txtHtmlDescription === body,
+      khongConAltRong:    !/alt=""/.test(body),
+      soAnhDungKyVong:    expectImages == null || imgs === expectImages,
+      anhDungThuMuc:      expectImageFolder == null || imgs === 0 ||
+                          (body.match(new RegExp(expectImageFolder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length === imgs,
+      khongDungFieldKhac: Object.keys(data).every(k => k === 'txtHtmlDescription' || data[k] === before[k]),
+    };
+    const failed = Object.entries(checks).filter(([, v]) => !v).map(([k]) => k);
+    if (failed.length) return { status: 'ABORT', reason: 'bất biến không đạt — KHÔNG POST', failed, checks };
+
+    const backup = { fields: before, txtHtmlDescription_DB: getBrandStaticBody(document) };
+    if (dryRun) {
+      return { status: 'DRY', checks, willWrite: { len: body.length, imgs },
+               current: { len: before.txtHtmlDescription.length }, backup };
+    }
+
+    // POST bằng fetch, KHÔNG gọi ManufactureSubmit(): hàm đó window.location.href đi
+    // trang khác khi thành công, gọi nó là mất luôn cơ hội nghiệm thu tại chỗ.
+    const t0 = Date.now();
+    const res = await fetch('/v2/Product/ManufactureSubmit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest' },
+      body: jQuery.param(data), credentials: 'same-origin',
+    });
+    const ms = Date.now() - t0;
+    let reply = null; try { reply = JSON.parse(await res.text()); } catch (e) {}
+    // reply.status: -1 lỗi | 1 thêm mới | còn lại = cập nhật (giá trị là manuId), reply.error = categoryId
+
+    // Nghiệm thu: đọc lại tĩnh từ server. KHÔNG có tín hiệu thời gian ở mode này —
+    // ghi thật đo được ~1,2s, nên "nhanh = hỏng" của mode --news KHÔNG áp dụng.
+    const raw = await fetch(`/v2/Product/ManufactureEdit?manuId=${manuId}&categoryId=${categoryId}&site=${siteId}&_=${Date.now()}`,
+      { credentials: 'same-origin' }).then(r => r.text());
+    const after = new DOMParser().parseFromString(raw, 'text/html');
+    const bodyAfter = getBrandStaticBody(after);
+    const fieldsAfter = readBrandStaticFields(after);
+
+    const changed = Object.keys(before).filter(k => k !== 'txtHtmlDescription' && fieldsAfter[k] !== before[k]);
+    const verify = {
+      byteExact: bodyAfter === body,
+      len: bodyAfter.length,
+      imgs: (bodyAfter.match(/<img/g) || []).length,
+      links: (bodyAfter.match(/<a /g) || []).length,
+      hangVanBat: fieldsAfter.cbIsActived === 'Sử dụng',
+      fieldKhacBiDoi: changed,
+    };
+    return {
+      status: verify.byteExact && verify.hangVanBat && changed.length === 0 ? 'DONE' : 'FAIL',
+      ms, cmsReply: reply, verify, backup,
+    };
+  };
+
+  const getBrandFormData = () => {
+    if (typeof GetAllFormData !== 'function') throw new Error('không thấy GetAllFormData — sai trang, cần ManufactureEdit');
+    const d = GetAllFormData('#frmManufactureSubmit');
+    if (!d || !Object.keys(d).length) throw new Error('form #frmManufactureSubmit rỗng — mất session hoặc sai manuId');
+    return d;
+  };
+
+  const getBrandStaticBody = (doc) => {
+    const el = doc.getElementById('txtHtmlDescription');
+    if (!el) throw new Error('không thấy #txtHtmlDescription — mất session hoặc sai manuId/categoryId');
+    return el.value != null && el.value !== '' ? el.value : el.textContent;
+  };
+
+  // serializeArray tương đương, chạy trên DOM tĩnh vừa lấy từ server
+  const readBrandStaticFields = (doc) => {
+    const F = doc.getElementById('frmManufactureSubmit');
+    const out = {};
+    for (const el of F.querySelectorAll('[name]')) {
+      if (el.tagName === 'SELECT') {
+        const o = el.querySelector('option[selected]') || el.options[el.selectedIndex];
+        out[el.name] = o ? (o.getAttribute('value') ?? o.value) : '';
+      } else if (el.type === 'checkbox' || el.type === 'radio') {
+        if (el.hasAttribute('checked')) out[el.name] = el.value;   // không tick = vắng mặt, giống serializeArray
+      } else if (el.tagName === 'TEXTAREA') {
+        out[el.name] = el.textContent;
+      } else {
+        out[el.name] = el.getAttribute('value') ?? '';
+      }
+    }
+    return out;
+  };
+
+  return 'air-infobox-runner đã nạp: airUploadImages / airWriteBody / airCreateNews / airWriteBrandBody';
 })();

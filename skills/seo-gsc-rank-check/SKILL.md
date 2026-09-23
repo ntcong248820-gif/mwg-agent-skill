@@ -164,6 +164,87 @@ For each keyword:
 5. No GSC data → row left blank
 
 
+## Appending a New Date Batch
+
+When the user asks to "sinh hàng mới cho ngày X" or "thêm đợt đo mới":
+
+### Step A — Check existing batch structure
+
+```bash
+# Count rows and identify date batches
+command gws sheets +read --spreadsheet <ID> --range "Data Rank!M1:M20000" \
+  | python3 -c "..."
+```
+
+Each batch has the same number of rows as the keyword list (one row per keyword).
+Find the latest batch's row range, then set `FIRST_NEW_ROW = last_row + 1`.
+
+### Step B — Expand sheet if needed
+
+Sheet `rowCount` equals current data rows. Expand before writing:
+
+```bash
+command gws sheets spreadsheets batchUpdate \
+  --params '{"spreadsheetId": "<ID>"}' \
+  --json '{"requests":[{"updateSheetProperties":{"properties":{"sheetId":0,"gridProperties":{"rowCount":<new_count>}},"fields":"gridProperties.rowCount"}}]}'
+```
+
+### Step C — Copy keyword rows, write with new date
+
+Copy the non-date columns from the latest batch. For the date column **NEVER write
+text** like `"19/09/2026"` — a Google Sheet stores dates as **serial numbers**.
+Writing text causes red validation errors.
+
+**Calculate serial number:**
+```python
+from datetime import date
+serial = (date(YYYY, MM, DD) - date(1899, 12, 30)).days
+# e.g. 19/09/2026 → 46284
+```
+
+**Write with `valueInputOption: RAW`** so the number is stored as-is (not parsed):
+```bash
+--params '{"...", "valueInputOption": "RAW"}'
+```
+
+### Step D — Apply date number format to the date column
+
+After writing serial numbers, apply date cell format so they display as `dd/mm/yyyy`:
+
+```bash
+command gws sheets spreadsheets batchUpdate \
+  --params '{"spreadsheetId": "<ID>"}' \
+  --json '{
+    "requests": [{
+      "repeatCell": {
+        "range": {"sheetId": 0, "startRowIndex": <first-1>, "endRowIndex": <last>,
+                  "startColumnIndex": <col-index>, "endColumnIndex": <col-index+1>},
+        "cell": {"userEnteredFormat": {"numberFormat": {"type": "DATE", "pattern": "dd/mm/yyyy"}}},
+        "fields": "userEnteredFormat.numberFormat"
+      }
+    }]
+  }'
+```
+
+> **Pitfall:** Writing a date as text via `USER_ENTERED` valueInputOption looks fine
+> in dry-run but shows as red cells in the sheet because the column expects a
+> numeric DATE, not a string. Always use serial + RAW + explicit numberFormat.
+
+### Step E — Run rank check for the new date
+
+After rows are created, run the rank script normally:
+
+```bash
+python3 <skill-dir>/scripts/fetch-gsc-rankings.py \
+  --spreadsheet-id <ID> --sheet-name "Data Rank" \
+  --keyword-col G --date-col M --rank-col N --url-col O \
+  --target-date "DD/MM/YYYY" --dry-run
+```
+
+Confirm dry-run results, then re-run without `--dry-run`.
+
+---
+
 ## Security Policy
 
 - Never expose GSC API tokens in output.
