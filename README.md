@@ -28,6 +28,7 @@ Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `
 | [`onpage-cms-news-insert`](skills/onpage-cms-news-insert) | Chèn hàng loạt một câu kèm internal link (hoặc biên tập nội dung) vào bài Tin tức/Kinh nghiệm hay/Tekzone trên CMS, splice trên string thô, giữ nguyên taxonomy + trạng thái xuất bản, verify byte-exact | Một tab CMS đã đăng nhập |
 | [`onpage-internal-link`](skills/onpage-internal-link) | Đề xuất chèn internal link vào bài Hỏi đáp/Game App hoặc Kinh nghiệm hay: crawl bài live, chọn đúng đoạn văn theo chủ đề (rải đều vị trí, không dồn cuối bài), viết câu mention tự nhiên, điền sheet WF đi link | Python (bs4), `gws` CLI, 1-2 Google Sheet của riêng bạn |
 | [`tgdd-top-product-article`](skills/tgdd-top-product-article) | Viết mới/renew bài "Top N sản phẩm": verify sản phẩm còn kinh doanh bằng script (không cần mở browser), dựng source HTML chuẩn CMS, chèn shortcode `[sosanh]`/`[Product_Promotion]`, validate 21 check trước khi giao | Python (bs4), dùng chung với `content-html-optimizer` |
+| [`onpage-mdm-khai-bao`](skills/onpage-mdm-khai-bao) | Khai báo SEO trên hệ MDM/PIM (thay CMS) cho trang Danh mục, Hãng, Filter/Dòng Filter, Hãng+Filter: tra URL web ra bản ghi, ghi Title/Meta/Keyword/Infobox có khoá rowVersion + backup + đọc lại so từng byte, khôi phục, upload ảnh CDN, chờ web core mới hiện đúng. Sản phẩm PIM chỉ đọc | Node 18+, `chrome-devtools-mcp`, một tab MDM đã đăng nhập, file config (`MDM_CONFIG`) |
 
 
 4 skill `tgdd-infobox-*` và `tgdd-review-outline-infobox` là **bộ rule biên tập**,
@@ -46,6 +47,7 @@ kèm thông báo nếu thiếu biến:
 | `GWS_EXPECTED_ACCOUNT` | `tgdd-bai-pr-bao-ngoai` (chốt chặn ghi nhầm tài khoản; bỏ trống thì bỏ qua kiểm) |
 | `SHEET_GAME_APP_ID`, `SHEET_KINH_NGHIEM_HAY_ID` | `onpage-internal-link` (2 hệ sheet WF đi link) |
 | `SHEET_SHORTCODE_MAU_ID` | `tgdd-top-product-article` (sheet mẫu `categoryid`/`properties` cho shortcode `[sosanh]`) |
+| `MDM_CONFIG` | `onpage-mdm-khai-bao` (đường dẫn file JSON theo mẫu `config.example.json`; hoặc truyền `--config`) |
 
 ## Cài
 
@@ -76,19 +78,19 @@ không có đường sync ngược về canonical, và không bao giờ xoá fil
 
 ## Trước khi chạy skill ghi dữ liệu
 
-`onpage-cms-product-link-insert` và `content-cms-air-infobox` **sửa nội dung
-production**. Cả hai được viết với giả định là hệ CMS không rollback được, nên có
+`onpage-cms-product-link-insert`, `content-cms-air-infobox` và `onpage-mdm-khai-bao`
+**sửa nội dung production**. Cả ba được viết với giả định là hệ đích không rollback được, nên có
 sẵn các cổng chặn: backup từng bài trước khi ghi, bộ bất biến phải xanh hết mới
 POST, đọc lại sát trước khi ghi để không đè người đang sửa tay, và verify
 byte-exact sau khi ghi.
 
-Đừng bỏ các cổng đó để chạy nhanh hơn. Chạy `dryRun: true` một lô nhỏ trước.
+Đừng bỏ các cổng đó để chạy nhanh hơn. Chạy `dryRun: true` (skill MDM: bỏ `--live`) một lô nhỏ trước.
 
 Riêng `content-cms-air-infobox` còn upload ảnh lên CDN, và **ảnh đã lên CDN thì
 không xoá được** — tên file trùng là mất vĩnh viễn tên đó. Kiểm HEAD 404 trước
 khi upload, và đặt tên file có tiền tố từ khoá của bài.
 
-Hai skill này mô tả hợp đồng endpoint của một CMS nội bộ. Chúng **không** chứa
+Ba skill này mô tả hợp đồng endpoint của hệ CMS/MDM nội bộ. Chúng **không** chứa
 credential và không tự đăng nhập — phải có sẵn một phiên đăng nhập hợp lệ do bạn
 tự mở.
 

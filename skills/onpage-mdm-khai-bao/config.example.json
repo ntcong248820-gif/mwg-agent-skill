@@ -1,0 +1,26 @@
+{
+  "mdm": {
+    "_note": "Chép thành mdm.config.json (đừng commit), điền giá trị thật, rồi trỏ bằng --config hoặc biến MDM_CONFIG. Lấy ID màn bằng cách mở màn trên MDM rồi xem request getinfor/getlist trong DevTools. Token KHÔNG để ở đây — skill đọc token trong IndexedDB của tab đã đăng nhập.",
+    "uiOrigin": "<origin giao diện MDM, vd https://mdm.example.vn>",
+    "apiBase": "<base API MDM, kết thúc bằng /api/v1/>",
+    "pimApiBase": "<base API PIM, kết thúc bằng /api/v1/>",
+    "category": {
+      "objectId": "<objectId màn Danh mục>",
+      "tableId": "<tableId màn Danh mục>",
+      "functionId": "<functionId màn Danh mục>",
+      "rootId": "<rootId cây danh mục (= rootCategoryId PIM)>"
+    },
+    "brand": {
+      "objectId": "<objectId màn Hãng-Danh mục>",
+      "tableId": "<tableId màn Hãng>",
+      "functionId": "<functionId màn Hãng>"
+    },
+    "filter": {
+      "objectId": "<objectId màn Filter>",
+      "tableId": "<tableId màn Filter>",
+      "functionId": "<functionId màn Filter>",
+      "relationId": "<relationId quan hệ Giá trị của Filter>"
+    },
+    "pimCompanyId": "<companyId PIM của TGDĐ>"
+  }
+}
