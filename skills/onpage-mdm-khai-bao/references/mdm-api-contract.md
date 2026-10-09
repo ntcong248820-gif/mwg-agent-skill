@@ -3,7 +3,7 @@
 Mọi lệnh là `POST` JSON tới `{mdm.apiBase}{path}` hoặc `{mdm.pimApiBase}{path}`, header
 `Authorization: Bearer <access_token>`. Token: IndexedDB `keyval-store` → store `keyval` → key
 `MDM_TOKEN` (tab MDM) hoặc `Token` (tab PIM) → `.access_token` (UUID 36 ký tự). JWT `kc_tokens` trong
-localStorage **không** dùng được. Token MDM gọi được cả API PIM. ID màn lấy từ config (`config.example.json`).
+localStorage **không** dùng được. Token MDM gọi được cả API PIM. ID màn lấy từ config `mdm.*`.
 
 ## rawValues
 
@@ -64,7 +64,7 @@ Multipart: `resourceName=pim_product`, `localeCode=vi_VN`,
 `allowedExtensions=gif,jpeg,jpg,png,tiff,webp`, `multipartFile`. Trả `object.filePath` = URL đầy đủ
 `https://cdnv2.tgdd.vn/pim/cdn/images/{yyyymm}/{tên gốc}{HHmmss}.{đuôi}`.
 
-## Sản phẩm PIM (chỉ đọc)
+## Sản phẩm PIM
 
 | Việc | Path | Body |
 | --- | --- | --- |
@@ -73,8 +73,27 @@ Multipart: `resourceName=pim_product`, `localeCode=vi_VN`,
 | Đọc lá | `productvariant/getinfor` | `{id, isTranslation:true, rootCategoryId, companyId}` — thiếu rootCategoryId trả `object:null` im lặng |
 | Đọc model | `model/getinfor` | `{id, isTranslation:true, categoryId:null, rootCategoryId, companyId}` |
 | Lịch sử | `productvariant/getchanginglog` | `{resouceId, resourceCode, rootCategoryId, companyId}` (chú ý `resouceId`) |
-| Ghi (KHÔNG dùng) | `productvariant/update`, `model/update` | đã đo được; xem traps |
+| Ghi lá | `productvariant/update` | `{localeCode, code, id, lvl, rootId:<id model gốc>, key:id, rawValues:OBJECT, rowVersion, isActivated, familyVariantId:<của MODEL gốc>, rootCategoryId, categoryId:<của MODEL gốc>, companyId, modelId:<nút Phiên bản>}` |
+| Family | `datasource/getfamilyinfor` | `{id:familyId, companyId}` — cần cho `model/update` |
+| Ghi model | `model/update` | getinfor model bỏ `categoryTeams/familyVariantId/familyVariantCode/isShowSync/rowOrder/errorNote/error` + `{code, name:<product_name>, image:<url ảnh đầu>, attributeGroups:null, attributes:null, lableAttributeCode, imageAttributeCode, familyName, familyVariants = familyVariantOptions = family.familyVariants, rootCategoryId, companyId, rawValues:OBJECT}` |
+
+Cả 2 payload dựng bằng `scripts/pim-product-core.mjs`, đã so khớp 100% với request giao diện PIM gửi
+(lá: trừ các field widget cây như `title` React, `pos`, `expanded`…). Bẫy: `familyVariantId` và
+`categoryId` trong `productvariant/getinfor` của lá **khác** giá trị giao diện gửi — phải lấy ở
+`model/getinfor` của model gốc.
 
 Mã PIM ≠ ID CMS (Acer 205799 ↔ CMS 115368). HTML trang SP core mới có `modelCode=<mã PIM>`.
-SP có biến thể (toàn MacBook, 31/176 model Laptop): field SEO ở **lá Màu**; 1 trang = mọi lá Màu của
+SP thường: title/description ở **model**. SP có biến thể (toàn MacBook, 31/176 model Laptop): field SEO ở **lá Màu**; 1 trang = mọi lá Màu của
 1 Phiên bản; `product_articles`/`key_features` chép trên mọi lá.
+
+Locale từng field SP (đo 09/10/2026, model 193929 và 209007): `title`, `description` = `vi_VN`;
+`product_articles` (Bài viết sản phẩm, HTML) và `key_features` (Đặc điểm nổi bật, HTML) = `all`. Field chưa có
+trên bản ghi thì skill tạo đúng locale này. Mẫu 14 trang Laptop/Máy tính để bàn: 13/14 model có bài (3,7–10 KB),
+1/14 có `key_features`; MacBook Air M5 (model 233437) chưa có bài ở cả model lẫn lá.
+
+## Filter giá — `tgdd_filter_price` (chỉ để tra, KHÔNG ghi)
+
+Đo lại 09/10/2026 bằng giao diện: bản ghi `dataobject/getinfor` chỉ có `code, name ("Giá"), category_code,
+display_order, is_price_slide_filter`; bảng con Mức giá (`datarelation/getlist2`, lọc `filter_type_price_code`)
+chỉ có `code, name ("Dưới 10 triệu"…), min_price, max_price, display_order`. Không có field SEO. Bỏ,
+chờ IT khởi tạo vùng khai báo.

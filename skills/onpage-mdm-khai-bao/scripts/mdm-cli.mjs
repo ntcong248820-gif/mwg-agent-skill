@@ -4,23 +4,29 @@
  *
  *   node .claude/skills/onpage-mdm-khai-bao/scripts/mdm-cli.mjs <lệnh> [cờ]
  *
- * Lệnh: lookup | read | write | restore | upload | verify-web | pim-find   (xem SKILL.md)
+ * Lệnh: lookup | read | write | restore | upload | verify-web | pim-find | product-write | product-ops | product-restore | batch   (xem SKILL.md)
  * Exit: 0 ok · 1 lỗi server/đọc lại lệch · 2 tham số sai · 3 ROW_VERSION · 4 không có tab/token · 5 không tra được · 6 verify-web hết giờ
+ * --transport auto|tab (hoặc env MDM_TRANSPORT): auto = gọi thẳng HTTP bằng token đọc 1 lần từ tab (RAM, không ghi đĩa), tự rơi về lái tab khi gặp vấn đề; tab = chỉ lái tab, token không rời trang.
+ * batch: nhiều việc trong MỘT phiên trình duyệt (một kết nối debug, một lần Chrome hỏi quyền) — exit = exit của việc làm lô dừng.
  *
- * In JSON kết quả ra stdout. Không bao giờ in token (token chỉ sống trong tab ẩn danh).
+ * In JSON kết quả ra stdout. Không bao giờ in token (token chỉ sống trong tab MDM).
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { MdmError, SCREENS, WEB_ORIGIN } from './mdm-core.mjs';
-import { MdmSession } from './mdm-browser.mjs';
+import { AutoSession } from './mdm-browser.mjs';
 import { lookup, pimFind, readRecord } from './mdm-commands-lookup.mjs';
 import { writeCommand, restoreCommand, uploadCommand, collectEdits, stamp } from './mdm-commands-write.mjs';
 import { pollUntil } from './mdm-web-verify.mjs';
+import { productWriteCommand, productOpsCommand, productRestoreCommand } from './pim-product-commands.mjs';
+import { loadOpsFile } from './pim-content-ops.mjs';
+import { normalizeJobs, runBatch, saveReadCommand } from './mdm-commands-batch.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPEATABLE = new Set(['set', 'set-file']);
-const BOOL = new Set(['live']);
+const BOOL = new Set(['live', 'resume', 'keep-going', 'check-web']);
+const TRANSPORTS = ['auto', 'tab'];
 
 export function parseArgs(argv) {
   const a = { _: [] };
@@ -71,8 +77,15 @@ const needScreen = (a) => {
 };
 
 async function withSession(cfg, a, fn) {
-  const s = new MdmSession(cfg, { pageId: a['page-id'] });
-  try { await s.open(); return await fn(s); } finally { await s.close(); }
+  const transport = a.transport || process.env.MDM_TRANSPORT || 'auto';
+  if (!TRANSPORTS.includes(transport)) throw new MdmError(`--transport phải là ${TRANSPORTS.join(' | ')}`, 2);
+  const s = new AutoSession(cfg, { pageId: a['page-id'], cacheLists: !!a.cacheLists, transport });
+  try {
+    await s.open();
+    const r = await fn(s);
+    if (r && typeof r === 'object' && !Array.isArray(r)) r.transport = { used: s.mode, fallbacks: s.fallbacks };
+    return r;
+  } finally { await s.close(); }
 }
 
 export async function main(argv) {
@@ -81,16 +94,12 @@ export async function main(argv) {
   const cfg = await loadCfg(a.config || process.env.MDM_CONFIG);
   switch (cmd) {
     case 'lookup':
-      return withSession(cfg, a, (s) => lookup(s, cfg, need(a, 'url')));
+      return withSession(cfg, a, (s) => lookup(s, cfg, need(a, 'url'), undefined, { checkWeb: a['check-web'] === true }));
     case 'pim-find':
       return withSession(cfg, a, (s) => pimFind(s, cfg, need(a, 'url')));
     case 'read': {
       const screen = needScreen(a);
-      const info = await withSession(cfg, a, (s) => readRecord(s, cfg, screen, need(a, 'id')));
-      const out = a.out || path.join(need(a, 'task-dir'), 'data/raw', `mdm-read-${screen}-${info.id.slice(0, 8)}-${stamp()}.json`);
-      fs.mkdirSync(path.dirname(out), { recursive: true });
-      fs.writeFileSync(out, JSON.stringify(info, null, 2));
-      return { status: 'SAVED', screen, id: info.id, rowVersion: info.rowVersion, out };
+      return withSession(cfg, a, (s) => saveReadCommand(s, cfg, { screen, id: need(a, 'id'), out: a.out, taskDir: a.out ? null : need(a, 'task-dir') }));
     }
     case 'write': {
       const screen = needScreen(a);
@@ -103,6 +112,28 @@ export async function main(argv) {
     }
     case 'upload':
       return withSession(cfg, a, (s) => uploadCommand(s, cfg, { file: need(a, 'file'), taskDir: need(a, 'task-dir'), live: !!a.live }));
+    case 'product-write': {
+      const edits = collectEdits(a.set, a['set-file']);
+      return withSession(cfg, a, (s) => productWriteCommand(s, cfg, { url: need(a, 'url'), edits, taskDir: need(a, 'task-dir'), live: !!a.live }));
+    }
+    case 'product-ops': {
+      const spec = loadOpsFile(need(a, 'ops')); // sai file ops → dừng TRƯỚC khi mở kết nối
+      return withSession(cfg, a, (s) => productOpsCommand(s, cfg, { url: need(a, 'url'), spec, taskDir: need(a, 'task-dir'), live: !!a.live }));
+    }
+    case 'product-restore':
+      return withSession(cfg, a, (s) => productRestoreCommand(s, cfg, { backupFile: need(a, 'backup'), taskDir: need(a, 'task-dir'), live: !!a.live }));
+    case 'batch': {
+      const jobsFile = need(a, 'jobs');
+      let raw;
+      try { raw = JSON.parse(fs.readFileSync(jobsFile, 'utf8')); } catch (e) { throw new MdmError(`đọc --jobs ${jobsFile} lỗi: ${e.message}`, 2); }
+      const jobs = normalizeJobs(raw, { taskDir: a['task-dir'] }); // sai 1 việc → dừng TRƯỚC khi mở kết nối
+      const ledgerFile = a.ledger || path.join(a['task-dir'] || '.', 'data/processed', `mdm-batch-${path.basename(jobsFile).replace(/\.[^.]+$/, '')}.jsonl`);
+      const log = (m) => process.stderr.write(`${m}\n`);
+      const r = await withSession(cfg, { ...a, cacheLists: true }, (s) => runBatch(s, cfg, jobs, {
+        taskDir: a['task-dir'], live: !!a.live, ledgerFile, resumeFrom: a.resume ? ledgerFile : null, keepGoing: !!a['keep-going'], log,
+      }));
+      return r;
+    }
     case 'verify-web': {
       const url = new URL(need(a, 'url'), cfg.webOrigin).href;
       const expect = {
@@ -124,12 +155,16 @@ export async function main(argv) {
       return { url, verdict: r.verdict, seconds: r.seconds, samples: r.history.length, out: r.out };
     }
     default:
-      throw new MdmError(`lệnh "${cmd || ''}" không có — dùng lookup | read | write | restore | upload | verify-web | pim-find`, 2);
+      throw new MdmError(`lệnh "${cmd || ''}" không có — dùng lookup | read | write | restore | upload | verify-web | pim-find | product-write | product-ops | product-restore | batch`, 2);
   }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   main(process.argv.slice(2))
-    .then((r) => { process.stdout.write(`${JSON.stringify(r, null, 2)}\n`); if (r && r.verdict === 'TIMEOUT') process.exit(6); })
+    .then((r) => {
+      process.stdout.write(`${JSON.stringify(r, null, 2)}\n`);
+      if (r && r.verdict === 'TIMEOUT') process.exit(6);
+      if (r && r.status === 'BATCH_STOPPED' && r.exitCode) process.exit(r.exitCode);
+    })
     .catch((e) => { process.stderr.write(`LỖI: ${e.message}\n`); process.exit(e.exitCode || 1); });
 }

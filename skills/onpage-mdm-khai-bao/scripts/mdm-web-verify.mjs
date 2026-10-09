@@ -59,10 +59,13 @@ export function checkPage(html, expect) {
 }
 
 export async function fetchCoreMoi(url, fetchFn = fetch) {
-  const res = await fetchFn(url, { headers: { 'User-Agent': UA, Cookie: 'webmoi_v2=2' }, redirect: 'manual' });
+  // Từ 06/10/2026 cookie chọn core là webmoi_v3 (1 = cũ, 2 = mới); webmoi_v2 cũ cho core NGƯỢC.
+  const res = await fetchFn(url, { headers: { 'User-Agent': UA, Cookie: 'webmoi_v3=2' }, redirect: 'manual' });
   const html = await res.text();
   const version = res.headers.get('x-version');
-  return { status: res.status, coreMoi: !version, version, server: res.headers.get('x-app-server'), html };
+  const server = res.headers.get('x-app-server');
+  // Có x-app-server thì tin nó (core mới = BE-webfe-tmdt-tgdd…); không có thì dựa x-version (core cũ có x-version Mwg-*).
+  return { status: res.status, coreMoi: server ? /webfe/i.test(server) && !version : !version, version, server, html };
 }
 
 /**

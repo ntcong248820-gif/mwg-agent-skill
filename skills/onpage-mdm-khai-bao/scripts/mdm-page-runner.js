@@ -1,9 +1,11 @@
 /*
- * mdm-page-runner.js — chạy TRONG tab MDM ẩn danh đã đăng nhập (nạp bằng evaluate_script).
+ * mdm-page-runner.js — chạy TRONG tab MDM đã đăng nhập (nạp bằng evaluate_script).
  *
- * Khai báo __mdmRun(cfg, ops): lấy token từ IndexedDB của trang (keyval-store/keyval,
- * key MDM_TOKEN; tab PIM thì key Token), gửi lần lượt từng op, trả kết quả.
- * Token KHÔNG BAO GIỜ được trả ra ngoài — chỉ dùng trong header của fetch.
+ * Token nằm ở IndexedDB của trang (keyval-store/keyval, key MDM_TOKEN; tab PIM thì key Token).
+ *   __mdmToken()        đọc token. CHỈ đường gọi thẳng (mdm-direct.mjs) mới gọi riêng hàm này để mang token vào
+ *                       RAM tiến trình CLI; không in, không ghi đĩa.
+ *   __mdmRun(cfg, ops)  đường lái tab: gửi lần lượt từng op bằng fetch trong trang, trả kết quả. Đường này
+ *                       KHÔNG BAO GIỜ trả token ra ngoài — chỉ dùng trong header của fetch.
  *
  * op:
  *   {api:'mdm'|'pim', path, body, project?}   POST JSON. project={top:[...], raw:[...]} cắt bớt
@@ -11,7 +13,7 @@
  *   {api:'pim', upload:{b64, name, mime, allowedExtensions}}   POST multipart s3/cdnput.
  * Gặp op lỗi mạng thì dừng chuỗi (không chạy op sau) — op ghi không bao giờ được chạy mù.
  */
-var __mdmRun = async (cfg, ops) => {
+var __mdmToken = async () => {
   const readKey = (key) => new Promise((resolve) => {
     const req = indexedDB.open('keyval-store');
     req.onerror = () => resolve(null);
@@ -23,7 +25,11 @@ var __mdmRun = async (cfg, ops) => {
       } catch (e) { resolve(null); }
     };
   });
-  const tok = (await readKey('MDM_TOKEN')) || (await readKey('Token'));
+  return (await readKey('MDM_TOKEN')) || (await readKey('Token'));
+};
+
+var __mdmRun = async (cfg, ops) => {
+  const tok = await __mdmToken();
   if (!tok) return { ok: false, reason: 'no_token' };
 
   const base = (api) => (api === 'pim' ? cfg.pimApiBase : cfg.apiBase);

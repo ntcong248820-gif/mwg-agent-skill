@@ -134,13 +134,34 @@ export function isRowVersionConflict(res) {
   return !!res && res.error === true && res.errorReason === 'row_version';
 }
 
+/** Tham số theo dõi/cache không đổi trang đích — bỏ qua. `amp;x` là dấu vết `&amp;` trong link cũ. */
+const IGNORED_PARAM = /^(itm_.*|utm_.*|gclid|fbclid|clearcache|amp;.*)$/i;
+
+/** Tách query của URL listing → {g} hoặc ném exit 2 với tham số chưa hỗ trợ. */
+export function listingQuery(searchParams) {
+  let g = null;
+  for (const [k, v] of searchParams) {
+    if (IGNORED_PARAM.test(k)) continue;
+    if (k === 'g') {
+      if (!v) throw new MdmError('?g= rỗng', 2);
+      if (g !== null) throw new MdmError('nhiều tham số ?g= — chỉ hỗ trợ một', 2);
+      g = v;
+    } else if (k === 'p') {
+      throw new MdmError('trang lọc giá ?p= không có bản ghi MDM để ghi (màn tgdd_filter_price chỉ có mức giá, không có title/mô tả/infobox — đo lại 09/10/2026); title là mẫu cố định của web. chờ IT khởi tạo vùng khai báo SEO cho Filter giá', 2);
+    } else {
+      throw new MdmError(`tham số ?${k}= chưa hỗ trợ — bỏ query hoặc tra tay rồi dùng --screen/--id`, 2);
+    }
+  }
+  return { g };
+}
+
 /** URL web → slug. Trang SP có 2 đoạn (/laptop/ten-sp) → kind product. */
 export function parseWebUrl(url, webOrigin) {
   let u;
   try { u = new URL(url, webOrigin); } catch { throw new MdmError(`URL không hợp lệ: ${url}`, 2); }
   if (webOrigin && u.origin !== new URL(webOrigin).origin) throw new MdmError(`URL không thuộc ${webOrigin}: ${url}`, 2);
   const parts = u.pathname.split('/').filter(Boolean);
-  if (parts.length === 1) return { kind: 'listing', slug: parts[0] };
+  if (parts.length === 1) return { kind: 'listing', slug: parts[0], g: listingQuery(u.searchParams).g };
   if (parts.length === 2) return { kind: 'product', category: parts[0], slug: parts[1] };
   throw new MdmError(`không nhận dạng được loại trang: ${u.pathname}`, 2);
 }

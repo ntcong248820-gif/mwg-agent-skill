@@ -13,6 +13,11 @@ import {
 import { checkPage, pollUntil, extractTitle } from './mdm-web-verify.mjs';
 import { writeCommand, restoreCommand, uploadCommand, collectEdits } from './mdm-commands-write.mjs';
 import { parseArgs } from './mdm-cli.mjs';
+import { normalizeJobs, runBatch, doneKeysFrom } from './mdm-commands-batch.mjs';
+import { MdmSession, AutoSession } from './mdm-browser.mjs';
+import { DirectRunner, DirectUnavailable, isReadOp } from './mdm-direct.mjs';
+import vm from 'node:vm';
+import { TimeoutError, CliError } from './cms-cli-mcp.mjs';
 
 let pass = 0, fail = 0;
 const t = (name, cond, extra) => { if (cond) { pass++; console.log('  ok  ', name); } else { fail++; console.log('  FAIL', name, extra ?? ''); } };
@@ -131,6 +136,216 @@ console.log('\n# luồng ghi trên server giả');
   const u2 = await uploadCommand(upS, CFG, { file: img, taskDir: tmp, live: true, fetchFn: head });
   t('upload lần 2 cùng byte → REUSED, không up lại', u1.status === 'UPLOADED' && u2.status === 'REUSED' && ups === 1);
   t('đuôi lạ bị từ chối', await rejectsCode(uploadCommand(upS, CFG, { file: path.join(tmp, 'a.svg'), taskDir: tmp, live: true }), 2));
+}
+
+console.log('\n# batch: một phiên cho cả lô');
+{
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'mdm-batch-'));
+  const stores = { A: { id: 'A', rowVersion: 1, rawValues: { seo_title: R('a0'), url: R('a') } }, B: { id: 'B', rowVersion: 7, rawValues: { seo_title: R('b0'), url: R('b') } }, C: { id: 'C', rowVersion: 3, rawValues: { seo_title: R('c0'), url: R('c') } } };
+  let conflictOn = null;
+  const fakeS = {
+    async post(api, p, body) {
+      if (p.endsWith('getinfor')) return { error: false, object: JSON.parse(JSON.stringify(stores[body.id || body.dataObjectId || body.recordId] || stores[Object.values(body).find((v) => stores[v])])) };
+      if (p.endsWith('update')) {
+        const st = stores[body.id];
+        if (conflictOn === body.id || body.rowVersion !== st.rowVersion) return { error: true, errorReason: 'row_version', toastMessage: 'đã đổi' };
+        st.rawValues = body.rawValues; st.rowVersion += 1; return { error: false, object: true };
+      }
+      throw new Error(`không mong đợi ${p}`);
+    },
+  };
+  const job = (id, v) => ({ cmd: 'write', screen: 'brand', id, set: { seo_title: v } });
+  const jobs = normalizeJobs([job('A', 'a1'), job('B', 'b1'), job('C', 'c1')], { taskDir: tmp });
+  t('normalize: key mặc định cmd:id', jobs[0].key === 'write:A' && jobs[0].hash.length === 16);
+  t('normalize: file việc sai → exit 2 trước khi chạm mạng', throwsCode(() => normalizeJobs([job('A', 'x'), { cmd: 'write', screen: 'brand', set: { seo_title: 'y' } }], { taskDir: tmp }), 2));
+  t('normalize: cmd lạ → exit 2', throwsCode(() => normalizeJobs([{ cmd: 'drop' }], { taskDir: tmp }), 2));
+  t('normalize: field cấm (url) ở việc cuối lô → exit 2 trước khi chạy', throwsCode(() => normalizeJobs([job('A', 'x'), { cmd: 'write', screen: 'brand', id: 'B', set: { url: 'x' } }], { taskDir: tmp }), 2));
+  t('normalize: field cấm của SP → exit 2', throwsCode(() => normalizeJobs([{ cmd: 'product-write', url: '/laptop/x', set: { keyword: 'x' } }], { taskDir: tmp }), 2));
+  {
+    const opsFile = path.join(tmp, 'ops.json');
+    const good = { field: 'product_articles', expectedBeforeSha256: 'a'.repeat(64), ops: [{ id: 'A1', type: 'replace', find: 'x', new: 'y' }] };
+    fs.writeFileSync(opsFile, JSON.stringify(good));
+    const [pj] = normalizeJobs([{ cmd: 'product-ops', url: '/laptop/x', ops: opsFile }], { taskDir: tmp });
+    t('normalize: product-ops nạp file ops, key riêng', pj.key === 'product-ops:/laptop/x' && pj.args.spec.ops.length === 1);
+    fs.writeFileSync(opsFile, JSON.stringify({ ...good, field: 'title' }));
+    t('normalize: product-ops với file ops sai → exit 2 trước khi chạy', throwsCode(() => normalizeJobs([{ cmd: 'product-ops', url: '/laptop/x', ops: opsFile }], { taskDir: tmp }), 2));
+    fs.writeFileSync(opsFile, JSON.stringify({ ...good, ops: [{ id: 'A1', type: 'replace', find: 'x', new: 'z' }] }));
+    t('normalize: sửa nội dung file ops → hash đổi (--resume chạy lại)', normalizeJobs([{ cmd: 'product-ops', url: '/laptop/x', ops: opsFile }], { taskDir: tmp })[0].hash !== pj.hash);
+  }
+  t('normalize: key trùng → exit 2', throwsCode(() => normalizeJobs([job('A', 'x'), job('A', 'y')], { taskDir: tmp }), 2));
+  t('normalize: việc ghi mà thiếu task-dir → exit 2', throwsCode(() => normalizeJobs([job('A', 'x')], {}), 2));
+
+  const ledger = path.join(tmp, 'ledger.jsonl');
+  const dry = await runBatch(fakeS, CFG, jobs, { taskDir: tmp, live: false, ledgerFile: ledger });
+  t('dry: không ghi gì, 3 việc DRY', dry.status === 'BATCH_DONE' && dry.counts.DRY === 3 && stores.A.rowVersion === 1);
+
+  conflictOn = 'B';
+  const stop = await runBatch(fakeS, CFG, jobs, { taskDir: tmp, live: true, ledgerFile: ledger, resumeFrom: ledger });
+  t('live: việc A ghi, B xung đột → dừng exit 3, C chưa chạy', stop.status === 'BATCH_STOPPED' && stop.exitCode === 3 && stop.ran === 2 && stop.notRun === 1 && stores.A.rowVersion === 2 && stores.C.rowVersion === 3, JSON.stringify(stop));
+  t('sổ ghi mỗi việc đã chạy 1 dòng', fs.readFileSync(ledger, 'utf8').trim().split('\n').filter((l) => JSON.parse(l).live).length === 2);
+
+  conflictOn = null;
+  const resumed = await runBatch(fakeS, CFG, jobs, { taskDir: tmp, live: true, ledgerFile: ledger, resumeFrom: ledger });
+  t('resume: A bỏ qua (đã WRITTEN), B và C ghi', resumed.status === 'BATCH_DONE' && resumed.skipped === 1 && resumed.counts.WRITTEN === 2 && stores.A.rowVersion === 2 && stores.B.rowVersion === 8 && stores.C.rowVersion === 4, JSON.stringify(resumed));
+  t('doneKeysFrom: DRY không tính là xong', !doneKeysFrom(ledger).has('write:ZZ') && doneKeysFrom(ledger).size === 3);
+
+  const changed = normalizeJobs([job('A', 'a-KHÁC'), job('B', 'b1'), job('C', 'c1')], { taskDir: tmp });
+  const rerun = await runBatch(fakeS, CFG, changed, { taskDir: tmp, live: true, ledgerFile: ledger, resumeFrom: ledger });
+  t('resume: nội dung việc đổi → chạy lại, không bỏ qua nhầm', rerun.counts.WRITTEN === 1 && rerun.skipped === 2 && stores.A.rawValues.seo_title[0].data === 'a-KHÁC', JSON.stringify(rerun));
+
+  const notFound = { async post() { throw new MdmError('không tra được', 5); } };
+  const lk = normalizeJobs([{ cmd: 'lookup', url: '/a' }, { cmd: 'lookup', url: '/b' }], { taskDir: tmp });
+  const nf1 = await runBatch(notFound, CFG, lk, { taskDir: tmp, live: false, ledgerFile: path.join(tmp, 'l2.jsonl') });
+  t('exit 5 mặc định dừng lô', nf1.status === 'BATCH_STOPPED' && nf1.exitCode === 5 && nf1.ran === 1);
+  const nf2 = await runBatch(notFound, CFG, lk, { taskDir: tmp, live: false, ledgerFile: path.join(tmp, 'l3.jsonl'), keepGoing: true });
+  t('--keep-going vượt qua exit 5', nf2.status === 'BATCH_DONE' && nf2.ran === 2 && nf2.counts.ERROR === 2);
+  const hard = { async post() { throw new MdmError('server hỏng', 1); } };
+  const nf3 = await runBatch(hard, CFG, lk, { taskDir: tmp, live: false, ledgerFile: path.join(tmp, 'l4.jsonl'), keepGoing: true });
+  t('--keep-going KHÔNG vượt qua exit 1', nf3.status === 'BATCH_STOPPED' && nf3.exitCode === 1 && nf3.ran === 1);
+
+  // cache danh sách tĩnh trong phiên
+  let evals = 0;
+  const client = { pageId: null };
+  const sess = new MdmSession(CFG, { client, cacheLists: true });
+  sess.run = MdmSession.prototype.run.bind(sess);
+  // thay evaluate qua client.callTool: trả đúng định dạng evaluate_script
+  client.callTool = async () => { evals++; return { content: [{ type: 'text', text: '```json\n' + JSON.stringify({ ok: true, results: [{ ok: true, json: { error: false, object: [] } }] }) + '\n```' }] }; };
+  const list = [{ api: 'mdm', path: 'dataobject/getlist', body: { x: 1 } }];
+  await sess.run(list); await sess.run(list);
+  t('cache: getlist trùng chỉ gọi 1 lần', evals === 1);
+  const info = [{ api: 'mdm', path: 'dataobject/getinfor', body: { id: 1 } }];
+  await sess.run(info); await sess.run(info);
+  t('cache: getinfor KHÔNG bao giờ cache', evals === 3);
+  const pimList = [{ api: 'pim', path: 'dataobject/getlist', body: { x: 1 } }];
+  await sess.run(pimList); await sess.run(pimList);
+  t('cache: PIM không cache', evals === 5);
+  const plain = new MdmSession(CFG, { client });
+  const e0 = evals; await plain.run(list); await plain.run(list);
+  t('cache: mặc định tắt (lệnh đơn không đổi hành vi)', evals === e0 + 2);
+
+  // open(): list_pages treo không được phép sinh thêm kết nối nếu cùng kết nối còn trả lời được
+  const mkClient = (listScript) => {
+    const c = { connects: 0, closes: 0, listCalls: 0, pageId: null };
+    c.connect = async () => { c.connects++; };
+    c.close = async () => { c.closes++; };
+    c.callTool = async (name) => {
+      if (name === 'list_pages') { const step = listScript[c.listCalls++]; if (step === 'timeout') throw new TimeoutError('treo'); return { structuredContent: { pages: [] } }; }
+      throw new Error(`không mong đợi ${name}`);
+    };
+    return c;
+  };
+  const quiet = () => {};
+  const c1 = mkClient(['ok']);
+  await new MdmSession(CFG, { client: c1 }).open({ log: quiet }).catch(() => {});
+  t('open: bình thường → 1 kết nối, 1 list_pages', c1.connects === 1 && c1.listCalls === 1);
+  const c2 = mkClient(['timeout', 'ok']);
+  const e2 = await new MdmSession(CFG, { client: c2 }).open({ log: quiet }).catch((e) => e);
+  t('open: treo 1 lần → thử lại trên CÙNG kết nối, không khởi động lại MCP', c2.connects === 1 && c2.closes === 0 && c2.listCalls === 2 && e2 instanceof CliError && e2.exitCode === 4, `${c2.connects}/${c2.closes}/${c2.listCalls}`);
+  const c3 = mkClient(['timeout', 'timeout', 'ok']);
+  await new MdmSession(CFG, { client: c3 }).open({ log: quiet }).catch(() => {});
+  t('open: treo 2 lần → khởi động lại MCP đúng 1 lần', c3.connects === 2 && c3.closes === 1 && c3.listCalls === 3, `${c3.connects}/${c3.closes}/${c3.listCalls}`);
+  const c4 = mkClient(['timeout', 'timeout', 'timeout']);
+  const e4 = await new MdmSession(CFG, { client: c4 }).open({ log: quiet }).catch((e) => e);
+  t('open: treo cả 3 lần → báo lỗi, không vòng lặp', e4 instanceof TimeoutError && c4.connects === 2 && c4.listCalls === 3);
+}
+
+console.log('\n# 2 đường: gọi thẳng (direct) + rơi về lái tab');
+{
+  const DCFG = { ...CFG, uiOrigin: 'https://mdm.test', apiBase: 'https://api.test/mdm/', pimApiBase: 'https://api.test/pim/' };
+  const TOKEN = 'TOK-' + 'x'.repeat(40);
+  const reply = (obj, status = 200) => new Response(typeof obj === 'string' ? obj : JSON.stringify(obj), { status });
+  const rows = { error: false, object: [{ id: 1, name: 'n', big: 'B'.repeat(50), raw_values: JSON.stringify({ url: 'u', article: 'A'.repeat(50) }) }] };
+  const proj = { top: ['id', 'name'], raw: ['url'] };
+
+  // parity thật: chạy NGUYÊN runner trong tab giả và DirectRunner trên cùng fetch giả
+  const seen = [];
+  const fakeFetch = async (url, init) => { seen.push({ url: String(url), auth: init.headers.authorization, body: init.body }); return reply(rows); };
+  const idb = { open: () => { const req = {}; setTimeout(() => req.onsuccess && req.onsuccess(), 0);
+    req.result = { transaction: () => ({ objectStore: () => ({ get: () => { const g = {}; setTimeout(() => g.onsuccess && g.onsuccess(), 0); g.result = { access_token: TOKEN }; return g; } }) }) }; return req; } };
+  const ctx = vm.createContext({ indexedDB: idb, fetch: fakeFetch, atob, FormData, Blob, Uint8Array, JSON, Date, URL, String, Promise, setTimeout });
+  vm.runInContext(fs.readFileSync(new URL('./mdm-page-runner.js', import.meta.url), 'utf8'), ctx);
+  const ops = [{ api: 'mdm', path: 'dataobject/getlist', body: { a: 1 }, project: proj }, { api: 'pim', path: 'model/getinfor', body: { id: 'x' } }];
+  const viaTab = JSON.parse(JSON.stringify(await vm.runInContext('__mdmRun', ctx)(DCFG, ops)));
+  const tabSeen = seen.splice(0);
+  const viaDirect = await new DirectRunner(DCFG, TOKEN, { fetchFn: fakeFetch }).run(ops);
+  const strip = (r) => (Array.isArray(r) ? r : r.results).map(({ ms, ...x }) => x);
+  t('parity: kết quả direct = kết quả runner trong tab (gồm project)', JSON.stringify(strip(viaDirect)) === JSON.stringify(strip(viaTab)), JSON.stringify(strip(viaDirect)) + ' vs ' + JSON.stringify(strip(viaTab)));
+  t('parity: cùng URL + header Bearer + body', JSON.stringify(seen.map((x) => [x.url, x.auth, x.body])) === JSON.stringify(tabSeen.map((x) => [x.url, x.auth, x.body])) && seen[0].auth === `Bearer ${TOKEN}` && seen[0].url === 'https://api.test/mdm/dataobject/getlist');
+  const emptyIdb = { open: () => { const q = {}; setTimeout(() => q.onerror && q.onerror(), 0); return q; } };
+  const ctx2 = vm.createContext({ indexedDB: emptyIdb, fetch: fakeFetch, atob, FormData, Blob, Uint8Array, JSON, Date, URL, String, Promise, setTimeout });
+  vm.runInContext(fs.readFileSync(new URL('./mdm-page-runner.js', import.meta.url), 'utf8'), ctx2);
+  t('runner: tab không có token → {ok:false, reason:no_token}', (await vm.runInContext('__mdmRun', ctx2)(DCFG, ops)).reason === 'no_token');
+
+  const run1 = (op, f) => new DirectRunner(DCFG, TOKEN, { fetchFn: f }).run([op]);
+  const rd = { api: 'mdm', path: 'dataobject/getinfor', body: {} };
+  const wr = { api: 'mdm', path: 'dataobject/update', body: {} };
+  t('isReadOp: getinfor/getlist* đọc; update/upload ghi', isReadOp(rd) && isReadOp({ path: 'productvariant/getlist4tree' }) && !isReadOp(wr) && !isReadOp({ upload: {} }));
+  const rejects = async (p, reason) => { try { await p; return false; } catch (e) { return e instanceof DirectUnavailable && e.reason === reason; } };
+  t('401 ở op đọc → DirectUnavailable(auth)', await rejects(run1(rd, async () => reply('', 401)), 'auth'));
+  t('403 ở op GHI → DirectUnavailable(auth) (server từ chối, chưa ghi gì)', await rejects(run1(wr, async () => reply('', 403)), 'auth'));
+  t('op đọc đứt mạng → DirectUnavailable(network)', await rejects(run1(rd, async () => { throw new Error('socket hang up'); }), 'network'));
+  t('op đọc nhận HTML 502 → DirectUnavailable(non-json)', await rejects(run1(rd, async () => reply('<html>bad gateway</html>', 502)), 'non-json'));
+  t('op GHI đứt mạng giữa chừng → KHÔNG rơi về (kết quả ok:false, dừng chuỗi)', (await run1(wr, async () => { throw new Error('socket hang up'); }))[0].ok === false);
+  const refused = Object.assign(new Error('fetch failed'), { cause: { code: 'ECONNREFUSED' } });
+  t('op GHI mà request chưa rời máy (ECONNREFUSED) → được rơi về', await rejects(run1(wr, async () => { throw refused; }), 'network'));
+  const wtxt = await run1(wr, async () => reply('lỗi lạ', 500));
+  t('op GHI nhận non-JSON → trả text thô, không rơi về (không gửi lại)', wtxt[0].ok && wtxt[0].json === null && wtxt[0].text === 'lỗi lạ');
+  const leak = await run1(wr, async () => { throw new Error(`boom ${TOKEN} boom`); });
+  t('token bị che khỏi thông điệp lỗi', leak[0].ok === false && !leak[0].error.includes(TOKEN) && leak[0].error.includes('[redacted]'));
+  t('upload qua direct: multipart + Bearer', await (async () => { let got; await new DirectRunner(DCFG, TOKEN, { fetchFn: async (u, i) => { got = { u: String(u), a: i.headers.authorization, fd: i.body instanceof FormData }; return reply({ error: false }); } }).run([{ api: 'pim', upload: { b64: Buffer.from('abc').toString('base64'), name: 'a.png', mime: 'image/png', allowedExtensions: 'png' } }]); return got.u === 'https://api.test/pim/s3/cdnput' && got.a === `Bearer ${TOKEN}` && got.fd; })());
+
+  // AutoSession: tab giả
+  const mkTab = ({ tokenFails = false } = {}) => {
+    const log = { evals: [], tokenReads: 0 };
+    const client = { pageId: null, log,
+      async connect() {}, async close() {},
+      async callTool(name, args) {
+        if (name === 'list_pages') return { structuredContent: { pages: [{ id: 7, url: 'https://mdm.test/x' }] } };
+        if (name === 'select_page') return {};
+        const fn = args.function;
+        const wrap = (o) => ({ content: [{ type: 'text', text: '```json\n' + JSON.stringify(o) + '\n```' }] });
+        if (fn.includes('__mdmToken()') && fn.includes('{ token:')) { log.tokenReads++; return tokenFails ? { content: [{ type: 'text', text: `rác ${TOKEN} không phải json` }] } : wrap({ token: TOKEN }); }
+        log.evals.push(fn);
+        return wrap({ ok: true, results: [{ ok: true, status: 200, ms: 1, json: { error: false, object: ['tab'] } }] });
+      } };
+    return client;
+  };
+  const logs = [];
+  const mk = (transport, fetchFn, tabOpts) => { const client = mkTab(tabOpts); return { client, s: new AutoSession(DCFG, { client, transport, fetchFn, log: (m) => logs.push(m) }) }; };
+
+  let a = mk('auto', async () => reply({ error: false, object: ['direct'] }));
+  await a.s.open();
+  const r1 = await a.s.post('mdm', 'dataobject/getinfor', {});
+  t('auto: đọc token 1 lần, đi direct, không lái tab', a.s.mode === 'direct' && r1.object[0] === 'direct' && a.client.log.tokenReads === 1 && a.client.log.evals.length === 1 /* chỉ probe mở phiên */);
+
+  let n = 0;
+  a = mk('auto', async () => (n++ === 0 ? reply('', 401) : reply({ error: false, object: ['direct'] })));
+  await a.s.open();
+  const r2 = await a.s.post('mdm', 'dataobject/getinfor', {});
+  const r3 = await a.s.post('mdm', 'dataobject/getinfor', {});
+  t('auto: direct bị 401 → rơi về tab, giữ tab cho phần còn lại', r2.object[0] === 'tab' && r3.object[0] === 'tab' && a.s.mode === 'tab' && a.s.fallbacks[0] === 'auth' && n === 1 && a.s.direct === null);
+  t('rơi về không mở thêm kết nối MCP (cùng client)', a.client.log.tokenReads === 1);
+
+  a = mk('auto', async () => reply({}), { tokenFails: true });
+  await a.s.open();
+  const r4 = await a.s.post('mdm', 'dataobject/getinfor', {});
+  t('auto: không đọc được token → chạy bằng tab', a.s.mode === 'tab' && r4.object[0] === 'tab' && a.s.fallbacks[0] === 'no-token');
+  t('lỗi đọc token không làm lộ token ra log', !logs.join('\n').includes(TOKEN));
+
+  let called = 0;
+  a = mk('tab', async () => { called++; return reply({}); });
+  await a.s.open();
+  await a.s.post('mdm', 'dataobject/getinfor', {});
+  t('transport=tab: không bao giờ đọc token, không gọi HTTP thẳng', a.client.log.tokenReads === 0 && called === 0 && a.s.mode === 'tab');
+  t('transport lạ → exit 2', (() => { try { new AutoSession(DCFG, { client: mkTab(), transport: 'xyz' }); return false; } catch (e) { return e.exitCode === 2; } })());
+
+  let c = 0;
+  a = mk('auto', async () => { c++; return reply({ error: false, object: [] }); });
+  a.s.listCache = new Map();
+  await a.s.open();
+  await a.s.run([{ api: 'mdm', path: 'dataobject/getlist', body: { q: 1 } }]);
+  await a.s.run([{ api: 'mdm', path: 'dataobject/getlist', body: { q: 1 } }]);
+  t('cache danh sách tĩnh cũng áp cho đường direct', c === 1);
 }
 
 console.log('\n# CLI');
