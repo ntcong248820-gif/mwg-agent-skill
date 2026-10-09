@@ -4,7 +4,7 @@ description: "Research keyword SEO bằng Ahrefs API (Keywords Explorer) có c�
 when_to_use: "Trigger: research keyword, tìm từ khóa, sinh từ khóa, ahrefs keyword explorer, matching terms, lọc keyword, tốn bao nhiêu units Ahrefs."
 keywords: [ahrefs, keyword, research, filter, intent, units]
 metadata:
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # SEO Keyword Research (Ahrefs)

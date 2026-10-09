@@ -14,6 +14,13 @@ Rule viết cho thị trường Việt Nam (keyword tiếng Việt). Danh sách 
 - Không lấy tên nhà bán lẻ (`fptshop`, `cellphones`, `shopee`...) làm keyword.
 - Loại ở MỌI dạng trang (intent blog/hỗ trợ): `review`, `đánh giá`, `so sánh`, `vs`, `specs`, `thông số`, `hướng dẫn`, `cách`,
   `là gì`, `có tốt không`, `driver`, `tải`, `cài đặt`, `lỗi`, `sửa chữa`, `reset`, `firmware`, `ngày ra mắt`...
+- **Intent blog tầng 1 — hỏi/tư vấn/sự cố (drop, mọi dạng trang):** `nên mua`, `nên chọn`, `đáng mua`, `có nên`, `loại nào`,
+  `nào tốt/ngon/bền`, `ưu nhược`, `kinh nghiệm`, `mẹo`, `tư vấn`, `xuất xứ`, `bảo hành bao lâu`, `có bền`, `bền không`, `ổn không`,
+  `được không`, `có tốt`, `bị nóng/đơ/treo/lag`, `hay bị`, `không lên`, `nâng cấp`. `cách` không bắt `cách âm/nhiệt/điện`.
+- **Tầng 2 — mơ hồ (review):** `top`, `best`, `mới nhất`, `ra mắt`, `tốt nhất`, `tốt`, `phù hợp`, trừ khi chính trang đã có từ đó
+  và trừ `giá tốt` (intent mua). Áp ở mọi dạng trang.
+- **Mẫu kiểm hai chiều:** `scripts/known_intent_keywords.json` (blog phải khác keep, intent mua phải là keep), test `IntentBlogLot`
+  đọc file này. Thấy keyword blog lọt thì thêm vào file đó.
 - Giữ: biến thể giá/mua (`giá`, `giá rẻ`, `mua`, `bao nhiêu`, `chính hãng`).
 - **Đọc trang đích trước khi duyệt** (bước nên làm): mở URL, xem sản phẩm đang bán và khoảng giá để xác định intent thật.
   Keyword `giá rẻ` trên trang chỉ bán máy cao cấp là sai intent dù đúng chính tả.

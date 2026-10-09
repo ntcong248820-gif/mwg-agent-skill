@@ -18,12 +18,18 @@ SPEC_PREFIX = re.compile(  # token thông số/tên dòng, KHÔNG phải mã SKU
     r"^(?:(?:rtx|gtx|rx|arc)\d*|i[3579](?:-\w+)?|ryzen\w*|core\w*|ultra\w*|m[1-9](?:pro|max|ultra)?|snapdragon\w*|"
     r"gen\d+|usb\w*|hdmi\w*|wifi\d*|iphon\w*|ipad\w*|galaxy\w*|airpod\w*|macbook\w*|imac\w*|watch\w*)$")
 INTENT = re.compile(
-    r"(?<!\w)(review|đánh giá|danh gia|so sánh|so sanh|vs|versus|specs?|specification|thông số|hướng dẫn|cách|"
+    r"(?<!\w)(review|đánh giá|danh gia|so sánh|so sanh|vs|versus|specs?|specification|thông số|hướng dẫn|cách(?!\s*(?:âm|nhiệt|điện))|"
     r"how to|là gì|của nước nào|có tốt không|tốt không|driver|tải|download|cài đặt|firmware|lỗi|sửa chữa|"
     r"reset|mực in|hộp mực|đổ mực|crack|wiki|reddit|youtube|tin tức|release date|ngày ra mắt|notebookcheck|"
     r"hdsd|thay pin|thay màn hình|hình ảnh|hình nền|wallpaper|các loại|video|test|screen|refresh|rate)(?!\w)|"
     r"^(?:các|độ phân giải) |"
     r"(?<!chụp )(?<!máy )(?<!phim )(?<!film )(?<!in )(?<!\w)ảnh(?!\w)")
+INFO_DROP = re.compile(  # tầng 1: hỏi/tư vấn/sự cố -> người tìm không đang mua
+    r"(?<!\w)(nên mua|nên chọn|đáng mua|đáng tiền|có nên|loại nào|nào tốt|nào ngon|nào bền|ưu nhược|ưu điểm|nhược điểm|"
+    r"kinh nghiệm|mẹo|tư vấn|xuất xứ|bảo hành bao lâu|có bền|bền không|ổn không|được không|có tốt|"
+    r"bị nóng|bị đơ|bị treo|bị lag|hay bị|không lên|không nhận|nâng cấp)(?!\w)")
+INFO_REVIEW = re.compile(  # tầng 2: mơ hồ (có thể là intent mua hoặc đọc) -> để người xem, không tự ghi
+    r"(?<!giá )(?<!\w)(top|best|mới nhất|ra mắt|tốt nhất|tốt|phù hợp)(?!\w)")  # "giá tốt" là intent mua, không vào đây
 OUT_OF_PATTERN = re.compile(  # dạng hiếm gặp ở keyword hợp lệ -> để người xem
     r"(?<!\w)(cũ|second hand|secondhand|ngày xưa|retro|tiếng anh|english|best|top|gần đây|gần tôi|near me|"
     r"đà nẵng|cần thơ|hà nội|hải phòng|sài gòn|hcm|tphcm|biên hòa|huế|nha trang|vũng tàu|đà lạt|quận \d+)(?!\w)")
@@ -122,6 +128,8 @@ def classify(kw: str, ctx: dict) -> tuple[str, str]:
         return "drop", "quá ngắn"
     if INTENT.search(kw):
         return "drop", "intent blog/review/hỗ trợ"
+    if INFO_DROP.search(kw):
+        return "drop", "intent hỏi/tư vấn/sự cố (blog)"
     if RETAILER.search(kw):
         return "drop", "tên nhà bán lẻ"
     if not has_diacritics(kw) and NO_DIACRITIC_VI.search(kw):
@@ -136,10 +144,14 @@ def classify(kw: str, ctx: dict) -> tuple[str, str]:
     if off and kind != "sp":            # filter ngành hàng không gắn hãng: keyword trỏ một hãng thuộc trang hãng
         return "drop", f"trỏ riêng một hãng ({off[0]}) — thuộc trang hãng"
     if kind == "sp":
-        return _sp(kw, kw_t, ctx)
-    if kind == "hang":
-        return _hang(kw, kw_t, ctx, ctx_t)
-    return _filter(kw, kw_t, ctx, ctx_t)
+        verdict = _sp(kw, kw_t, ctx)
+    elif kind == "hang":
+        verdict = _hang(kw, kw_t, ctx, ctx_t)
+    else:
+        verdict = _filter(kw, kw_t, ctx, ctx_t)
+    if verdict[0] == "keep" and INFO_REVIEW.search(kw) and not INFO_REVIEW.search(ctx_text(ctx)):
+        return "review", "từ mơ hồ giữa mua và đọc (top/best/tốt/mới nhất...)"
+    return verdict
 
 
 def _sp(kw: str, kw_t: set[str], ctx: dict) -> tuple[str, str]:

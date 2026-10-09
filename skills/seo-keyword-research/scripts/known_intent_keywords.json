@@ -1,0 +1,15 @@
+{
+  "_doc": "Mẫu keyword đã biết để đo cả 2 chiều: blog LỌT (phải != keep) và intent mua BỊ LOẠI OAN (phải == keep). {x} = chủ thể trang (vd 'laptop asus', 'laptop gaming'). Thêm ca mới vào đây khi người duyệt chỉ ra keyword lọt.",
+  "blog": [
+    "{x} review", "{x} là gì", "{x} có tốt không", "{x} tốt không", "{x} có tốt", "{x} tốt", "{x} tốt nhất", "{x} loại nào tốt",
+    "{x} nào ngon", "nên mua {x}", "nên chọn {x}", "{x} đáng mua không", "{x} có nên mua", "{x} có nên mua không",
+    "{x} có bền không", "{x} bền không", "{x} dùng có ổn không", "{x} chơi game được không", "ưu nhược điểm {x}",
+    "kinh nghiệm mua {x}", "mẹo chọn {x}", "tư vấn mua {x}", "cách chọn {x}", "hướng dẫn chọn {x}", "{x} xuất xứ",
+    "{x} của nước nào", "{x} bảo hành bao lâu", "{x} bị nóng", "{x} bị đơ", "{x} bị treo", "{x} hay bị lỗi",
+    "{x} không lên nguồn", "{x} nâng cấp ram", "top {x}", "best {x}", "{x} mới nhất", "{x} ra mắt", "{x} phù hợp"
+  ],
+  "buy": [
+    "{x} giá", "{x} giá rẻ", "{x} giá bao nhiêu", "{x} chính hãng", "{x} trả góp", "{x} khuyến mãi", "bảng giá {x}",
+    "mua {x}", "{x} cho sinh viên", "{x} giá tốt", "mua {x} giá tốt"
+  ]
+}

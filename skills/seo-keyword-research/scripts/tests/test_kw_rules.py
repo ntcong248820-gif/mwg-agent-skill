@@ -142,5 +142,34 @@ class Hang(unittest.TestCase):
         self.assertEqual(v("máy in canon", self.ctx), "drop")
 
 
+class IntentBlogLot(unittest.TestCase):
+    """Keyword intent blog không được lọt, intent mua không bị loại oan. Mẫu nằm ở known_intent_keywords.json."""
+    import json as _json, os as _os
+    data = _json.load(open(_os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))),
+                                         "known_intent_keywords.json"), encoding="utf-8"))
+    ctxs = [("laptop asus", {"type": "hang", "nganh": "laptop", "hang": "Asus", "name": "Laptop Asus", "url": "laptop-asus"}),
+            ("laptop gaming", {"type": "nh", "nganh": "laptop", "filter": "gaming", "url": "laptop-gaming"})]
+
+    def test_blog_khong_duoc_keep(self):
+        for x, ctx in self.ctxs:
+            for t in self.data["blog"]:
+                self.assertNotEqual(v(t.format(x=x), ctx), "keep", t.format(x=x))
+
+    def test_intent_mua_van_keep(self):
+        for x, ctx in self.ctxs:
+            for t in self.data["buy"]:
+                self.assertEqual(v(t.format(x=x), ctx), "keep", t.format(x=x))
+
+    def test_cach_am_khong_bi_loai(self):  # "cách" là intent blog, nhưng "cách âm" là thuộc tính loa/tai nghe
+        ctx = {"type": "nh", "nganh": "tai nghe", "filter": "chống ồn", "url": "tai-nghe-chong-on"}
+        self.assertNotEqual(v("tai nghe chống ồn cách âm", ctx), "drop")
+        self.assertEqual(v("cách chọn tai nghe chống ồn", ctx), "drop")
+
+    def test_tu_mo_ho_la_review_khong_phai_drop(self):
+        ctx = self.ctxs[0][1]
+        for kw in ("laptop asus tốt", "top laptop asus", "laptop asus mới nhất"):
+            self.assertEqual(v(kw, ctx), "review", kw)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)
