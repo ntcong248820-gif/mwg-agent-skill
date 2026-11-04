@@ -6,7 +6,7 @@ runtime tương thích (Codex, Antigravity, Gemini CLI).
 Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `scripts/`,
 `references/`. Runtime đọc `SKILL.md` khi mô tả khớp với việc người dùng đang làm.
 
-## Danh mục Skill (54 skills)
+## Danh mục Skill (41 skills)
 
 ### Hệ CMS & MDM/PIM (Tạo bài, Air, Khai báo, Sửa nội dung)
 
@@ -33,8 +33,6 @@ Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `
 | [`content-laptop-product`](skills/content-laptop-product) | Viết, tối ưu và làm hình bài Content SP + đặc điểm nổi bật cho nhóm Laptop TGDĐ | Python 3.9+, Google Workspace CLI, Pillow |
 | [`tgdd-top-product-article`](skills/tgdd-top-product-article) | Viết mới hoặc renew bài Top N sản phẩm TGDĐ/ĐMX: verify còn kinh doanh, HTML CMS, 21 validate checks | Python 3.9+, BeautifulSoup |
 | [`tgdd-seo-title-description`](skills/tgdd-seo-title-description) | Viết, chỉnh sửa, kiểm tra và điền SEO Title/Meta Description cho TGDD/ĐMX (Evergreen và CTA mạnh) | Python 3.9+, Google Workspace CLI |
-| [`content-seo-semantic-pipeline`](skills/content-seo-semantic-pipeline) | Viết trọn bài SEO semantic theo quy trình 5 bước tab Thầy (brief -> semantic/outline -> viết -> tối ưu -> soát 7 checklist) | AI agent |
-| [`content-seo-semantic-outline`](skills/content-seo-semantic-outline) | Lên bộ Semantic/LSI keyword và dàn bài SEO Final (AIDA, FAB, phân bổ LSI theo H2/H3) | AI agent |
 | [`content-seo-semantic-audit`](skills/content-seo-semantic-audit) | Soát và chấm bài SEO semantic: lint đếm từ/từ khoá/brand, coverage, rà LSI, 7 checklist bởi 3 giám khảo | AI agent |
 | [`tgdd-bai-pr-bao-ngoai`](skills/tgdd-bai-pr-bao-ngoai) | Viết bài báo PR (booking PR) đăng báo ngoài (VnExpress, Kenh14...) giọng reviewer, Google Doc rich text inline | Python, ImageMagick, Google Workspace CLI |
 
@@ -71,28 +69,12 @@ Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `
 | [`seo-action-impact-review`](skills/seo-action-impact-review) | Nghiệm thu hiệu quả action SEO đã làm bằng GSC (clicks/CTR/rank 3 kỳ) | Python 3.9+, Google Workspace CLI, GSC MCP |
 | [`seo-cso-optimize`](skills/seo-cso-optimize) | Tối ưu Content Sản Phẩm đẩy SEO danh mục: audit 5 tiêu chí bài viết SP, log Data Order | Python 3.9+, Google Workspace CLI |
 
-### Vận hành Task & Workflow Agent
+### Công cụ Hỗ trợ, Đồng bộ & Spec IT
 
 | Skill | Làm gì | Cần gì |
 | --- | --- | --- |
-| [`seo-task-create`](skills/seo-task-create) | Tạo task SEO local (initiative, work_item, single); scaffold README, registry, workstream | Python 3.9+ |
-| [`seo-task-done`](skills/seo-task-done) | Đóng task SEO local, cập nhật status, Results, registry, report sync | Python 3.9+ |
-| [`seo-task-journal-sync`](skills/seo-task-journal-sync) | Cập nhật journal task SEO sau khi làm việc (Current State, Next Steps, reports index) | Python 3.9+ |
-| [`seo-task-state-audit`](skills/seo-task-state-audit) | Audit trạng thái toàn bộ task SEO local: frontmatter, report sync, registry parity | Python 3.9+ |
-| [`seo-weekly-action-plan`](skills/seo-weekly-action-plan) | Sinh plan action SEO tuần từ view sheet system, xuất job list cho multi-agent crew | Python 3.9+, Google Workspace CLI |
-| [`seo-daily-reporter`](skills/seo-daily-reporter) | Báo cáo task hàng ngày SEO MWG: annotate trạng thái hôm qua, đề xuất 3+2 task hôm nay | Python 3.9+, Google Workspace CLI |
-| [`seo-log-cv`](skills/seo-log-cv) | Ghi File 1 / CV tuần chi tiết: giờ làm, số lượng, note, link nghiệm thu | Python 3.9+, Google Workspace CLI |
-| [`seo-log-weekly-work`](skills/seo-log-weekly-work) | Ghi File 2 / Công việc TGDD: tổng hợp tuần/tháng theo hạng mục, hiệu quả nối về ranking/traffic | Python 3.9+, Google Workspace CLI |
-| [`seo-attendance-keo-cong`](skills/seo-attendance-keo-cong) | Báo cáo kéo công MWG: review File 1, điền bảng minh chứng, soạn tin nhắn xác nhận | Python 3.9+, Google Workspace CLI |
-| [`seo-work-efficiency-review`](skills/seo-work-efficiency-review) | Review hiệu quả làm việc theo kỳ từ giờ bấm công việc, phân tích thời gian và điểm nghẽn | Python 3.9+ |
-| [`seo-skill-sync`](skills/seo-skill-sync) | Đồng bộ skill một chiều từ surface canonical (.claude) ra các surface khác và kiểm parity | Node 18+ |
-| [`seo-new-product`](skills/seo-new-product) | Dựng file Plan SEO cho nhóm sản phẩm mới từ danh sách order, copy file mẫu, điền keyword | Python 3.9+, Google Workspace CLI |
 | [`seo-mo-ta-task-it`](skills/seo-mo-ta-task-it) | Soạn mô tả task gửi IT đúng format SEO MWG: khung A/B/C, tiêu chí nghiệm thu, dựng Google Doc | Python 3.9+, Google Workspace CLI |
-
-### Công cụ Hỗ trợ & Khác
-
-| Skill | Làm gì | Cần gì |
-| --- | --- | --- |
+| [`seo-skill-sync`](skills/seo-skill-sync) | Đồng bộ skill một chiều từ surface canonical (.claude) ra các surface khác và kiểm parity | Node 18+ |
 | [`batch-llm-skill`](skills/batch-llm-skill) | Đẩy CSV/JSONL qua batch API của OpenAI / Gemini để phân loại, trích xuất, tóm tắt kèm pool xoay vòng key | Python, OPENAI_API_KEY hoặc GEMINI_API_KEY |
 | [`chrome-profile`](skills/chrome-profile) | Mở URL trên đúng profile Google Chrome thật qua CLI chrome-profile + token DevTools MCP | Python 3.9+, Google Chrome |
 | [`fable-thinking`](skills/fable-thinking) | Quy trình suy luận đa giả định (Floor check, Constraint Loop, evidence-based) | — |
