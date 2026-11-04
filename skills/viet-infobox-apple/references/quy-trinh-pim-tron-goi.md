@@ -3,7 +3,7 @@
 Áp dụng cho infobox **trang Hãng** (`tgdd_brand_category` / `brand_cate_article`), **Filter** và **Dòng filter**
 (`tgdd_filter_atb` / `filter_inforbox`) trên PIM/MDM. **Chỉ viết mới** (trang chưa có infobox). Sửa/fresh bài đã có dùng `fresh-content`.
 
-- Sheet `1-FOAs-vxcKUy3YKiWjw5SX5lR3CsWzoccMYQK2dw9wo`, tab `skill_infobox` (gid 777100002). Luôn tra cột theo TÊN header:
+- Sheet từ biến môi trường `HOI_DAP_SHEET_ID` (hoặc `SHEET_INFOBOX_ID`), tab `skill_infobox`. Luôn tra cột theo TÊN header:
   Site, URL trang, Dạng trang (Hãng | Filter | Dòng filter), Keyword, KW phụ, URL CellphoneS, URL infobox dòng trước, Link tham khảo, Ghi chú
   (user điền) → Status (Run | Doing | Done | Pending | Lỗi), Bản ghi PIM, Title, Meta, Keyword PIM, Outline, Docs HTML, Link đã chèn, Cảnh báo,
   Trạng thái PIM (Chờ làm hình | Chờ ghi PIM | Đã ghi PIM | Đã lên web | Lỗi), Backup PIM, Cập nhật, Note PIM (script/Claude ghi).

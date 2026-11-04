@@ -6,6 +6,30 @@
 - Section chính dùng H3.
 - Heading con và câu hỏi FAQ dùng H4.
 - Không dùng H1.
+- Không đánh số thứ tự thủ công trước heading (`1. `, `2. `...). Heading CMS
+  chỉ phân cấp bằng H2/H3/H4, không cần số.
+- Khi biên tập một bài đã có sẵn: nếu bài gốc đang đánh số heading kiểu này,
+  bỏ số đó đi trong bản biên tập, không giữ lại theo bài gốc.
+
+## Self-link ở sapo
+
+Sapo (H2) phải có đúng 1 self-link trỏ về chính URL danh mục đang viết bài.
+
+- Anchor là từ khóa chính của bài — từ khóa có volume cao nhất trong Sheet
+  "All KW" ứng với URL danh mục này (xem `references/research-rules.md` mục
+  "Đa dạng hóa từ khóa"). Gắn link ngay ở lần xuất hiện đầu tiên của từ khóa
+  đó trong câu sapo, không viết thêm câu chỉ để có chỗ nhét anchor.
+- href là chính URL danh mục đang viết, không phải URL khác và không phải
+  trang chi tiết sản phẩm. Dùng `rel="noopener noreferrer" target="_blank"`
+  như các link khác trong bài.
+- Đây là ngoại lệ thứ ba được chèn link tay ngay khi viết draft (2 ngoại lệ
+  kia là cột tên sản phẩm ở bảng nổi bật và link hãng/dòng máy ở section
+  thương hiệu). Ngoại lệ này không cần verify qua `curl` như 2 ngoại lệ kia
+  vì link trỏ về chính URL đang viết, không phải nguồn khác — nhưng vẫn phải
+  gõ đúng URL danh mục, không suy đoán hay gõ sai chính tả.
+- Chỉ 1 self-link duy nhất trong toàn bài, đặt ở sapo. Không lặp lại self-link
+  này ở heading hay đoạn văn khác trong bài — self-link không tính là lỗi khi
+  QC, nhưng lặp nhiều lần đọc như spam link.
 
 ## Chọn đúng dạng trình bày
 
@@ -166,13 +190,33 @@ ngoại lệ riêng, khác với internal link SEO chèn ở bước optimizer:
    một dòng, giữ 1-2 phiên bản tiêu biểu và thay phần còn lại bằng sản phẩm
    bán chạy nhất của nhóm hoặc nền tảng khác, để bảng phủ được các lựa chọn
    chính của ngành hàng thay vì lặp lại một dòng.
-3. Trình bày bằng bảng, tối thiểu 3 cột: tên sản phẩm, thông số chính, giá
-   bán. Sắp xếp theo giá tăng dần để người đọc quét nhanh theo ngân sách.
+3. Trình bày bằng bảng, tối thiểu 4 cột: tên sản phẩm, thông số chính, giá
+   bán, và một cột **"Điểm mạnh & phù hợp với"**. Sắp xếp theo giá tăng dần
+   để người đọc quét nhanh theo ngân sách.
 4. Chỉ điền thông số và giá đọc được từ danh mục hoặc trang chi tiết sản
    phẩm. Không bịa, không làm tròn khác con số thật.
 5. Giữ 1 câu dẫn trước bảng và 1-2 câu kết sau bảng.
 6. Đây là chỗ duy nhất nêu phạm vi thương hiệu TGDĐ đang kinh doanh, viết
    gọn trong 1 câu.
+
+### Cột "Điểm mạnh & phù hợp với"
+
+Mỗi ô là 1-2 câu ngắn nêu điều gì khiến đúng sản phẩm đó nổi bật **so với các
+dòng còn lại trong cùng bảng**, và nó hợp với ai.
+
+- Lấy điểm khác biệt từ chính dữ liệu vừa thu thập cho bảng này (so sánh
+  tương đối giữa các dòng), ví dụ: "rẻ nhất bảng", "RAM cao hơn hẳn so với
+  mức giá", "màn hình tần số quét cao hơn các máy còn lại", "tặng kèm phần
+  mềm bản quyền mà các máy khác không có". Không nêu điểm mạnh chung chung
+  kiểu "cấu hình tốt, đáng mua" không gắn với thông số cụ thể nào.
+- Không suy rộng danh tiếng của dòng sản phẩm cao cấp cùng tên hãng sang một
+  sản phẩm khác chưa được kiểm chứng cùng đặc điểm đó. Ví dụ: một dòng máy
+  giá rẻ/nhái mang tên gần giống một hãng nổi tiếng (như "MacBook Neo" không
+  phải sản phẩm chính hãng Apple) không được gán mặc định "pin trâu, bền bỉ
+  như MacBook chính hãng" nếu thông số pin/độ bền của chính sản phẩm đó chưa
+  được xác minh — chỉ mô tả đúng thông số và giá thật đã thu thập.
+- Không lặp lại nguyên văn nội dung đã nêu ở cột thông số chính; viết thành
+  nhận định so sánh, không liệt kê lại thông số.
 
 ## Section “Những sai lầm thường gặp”
 

@@ -36,7 +36,10 @@ Có thể nhận thêm brief, đối tượng mục tiêu, điểm cần nhấn 
    bước tối ưu HTML sau đó bằng skill `content-html-optimizer` (chạy với
    `--fetch-links`), lấy URL từ Sheet MWG đã kiểm chứng — không phải từ trí nhớ.
    Bản draft giao đi phải sạch link để bước optimizer làm đúng phần của nó;
-   bài **chưa** qua bước chèn link thì **chưa** được coi là hoàn tất.
+   bài **chưa** qua bước chèn link thì **chưa** được coi là hoàn tất. Ngoại
+   lệ luôn bắt buộc: sapo H2 phải có đúng 1 self-link về chính URL danh mục
+   đang viết, gắn vào từ khóa chính — xem `references/formatting-rules.md`
+   mục "Self-link ở sapo".
 3. Không xếp hạng thương hiệu và không viết “hãng nào tốt nhất”.
 4. Không mặc định phải audit giá, tồn hàng, khuyến mãi hoặc trạng thái kinh doanh theo ngày và khu vực.
 5. Phần CTA tổng hợp ưu đãi và chính sách từ các sản phẩm trong danh mục rồi viết thành lợi ích mua hàng; không kể lại cách website hiển thị dữ liệu.
@@ -45,6 +48,7 @@ Có thể nhận thêm brief, đối tượng mục tiêu, điểm cần nhấn 
 
 ## Latest feedback rules
 
+- Write for a reader who is not in the trade: do not only transmit information and assume the reader understands. Common terms (CPU, RAM, SSD) need no explanation, but odd or jargon terms (TGP, NPU, WUXGA, xung nhịp, render, RAM hàn chết) must be explained once in plain words or replaced. Read `references/writing-rules.md` mục "Đặt mình vào người đọc".
 - Keep the TGDĐ purchase CTA compact: one section heading, a short lead, checklist bullets, and an optional short closing sentence. Do not create smaller headings inside this CTA.
 - Before a comparison table, use one simple reader-facing lead sentence. Do not explain editorial choices or research methodology.
 - Merge headings that cover the same product group or purchase intent. Read the detailed overrides in `references/formatting-rules.md`, `references/cta-rules.md`, and `references/final-checklist.md`.

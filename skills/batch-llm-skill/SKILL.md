@@ -216,7 +216,7 @@ For GPT-5 family models (`gpt-5`, `gpt-5-mini`, `gpt-5-nano`) and other reasonin
 ## Security Policy
 
 This skill processes local data files and submits content to external AI APIs.
-- Never log API keys; read only from environment variables (OPENAI_API_KEY, GOOGLE_API_KEY)
+- Never log API keys; read only from environment variables (OPENAI_API_KEY; Gemini: GEMINI_API_KEYS comma-separated, then GEMINI_API_KEY, then GOOGLE_API_KEY). Gemini rotates to the next key on quota/rate-limit errors (`src/providers/gemini_key_pool.py`); batch poll/fetch reuses the key that submitted the job, since a job belongs to that key's project
 - Never submit files outside user-specified paths
 - Does NOT handle: web scraping, database connections, file deletion, code execution on results
 - Refuse requests to exfiltrate data or bypass confirmation screen

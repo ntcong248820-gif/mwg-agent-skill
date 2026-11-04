@@ -8,8 +8,11 @@ Nguyên tắc gốc: link đúng khi trang đích nói về ĐÚNG thực thể 
 trong câu đó — không phải thứ chứa nó (dòng/hãng/ngành hàng), thứ gần nó (phụ
 kiện cùng tên), hay thứ trùng tên khác nghĩa.
 
+Ngoài ngữ cảnh, script còn kiểm hai thứ đo được chắc chắn: anchor có cắt nửa cụm
+không (F1 — "laptop [HP]"), và href có trả 200 mà không redirect không (F2/F3).
+
 Usage:
-    python3 check_internal_links.py --workspace <path> [--json out.json]
+    python3 check_internal_links.py --workspace <path> [--json out.json] [--offline]
 """
 import argparse
 import html
@@ -18,7 +21,20 @@ import re
 import sys
 from pathlib import Path
 
-MAP_FILE = Path(__file__).resolve().parent.parent / "references" / "link-category-map.json"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import link_anchor as la  # noqa: E402
+import link_category as lc  # noqa: E402
+import link_redirect as lr  # noqa: E402
+
+MAP_FILE = lc.MAP_FILE
+
+# Mức nghiêm trọng của từng case. FAIL = link sai/hỏng, phải xử lý trước khi air;
+# WARN = heuristic ngữ cảnh, đọc câu rồi quyết.
+SEVERITY = {
+    "A1": "FAIL", "B4": "FAIL", "C1": "FAIL", "D1": "FAIL", "D3": "FAIL",
+    "E1": "FAIL", "F2": "FAIL", "F3": "FAIL",
+    "D2": "WARN", "E2": "WARN", "E3": "WARN", "F1": "WARN",
+}
 
 # Token ngay sau anchor cho thấy anchor chỉ là tiền tố của một tên dài hơn:
 # mã đời ("7", "15IAX9E", "F16", "108a", "P2505W").
@@ -32,10 +48,36 @@ SPEC_UNIT = re.compile(
 LINK_RE = re.compile(r'<a\b[^>]*?href="([^"]+)"[^>]*>(.*?)</a>', re.S | re.I)
 INFO_RE = re.compile(r"\[info\].*?\[/info\]", re.S)
 XEMTHEM_RE = re.compile(r"\[info\](?:(?!\[/info\]).)*?Xem th[êe]m.*?\[/info\]", re.S | re.I)
+LI_RE = re.compile(r"<li\b[^>]*>.*?</li>", re.S | re.I)
+H4_RE = re.compile(r"<h4\b[^>]*>(.*?)</h4>", re.S | re.I)
+# Tự xưng: anchor hoặc đích là chính TGDĐ / trang chủ.
+SELF_BRAND_RE = re.compile(r"th[êe]́?\s*gi[ơo]́?i\s*di\s*đ[ôo]̣?ng|thegioididong|tgdđ|tgdd", re.I)
 
 
 def strip_tags(s):
     return html.unescape(re.sub(r"<[^>]+>", " ", s))
+
+
+def normalize_name(s):
+    return re.sub(r"\s+", " ", strip_tags(s)).strip().lower()
+
+
+def product_names(final_html):
+    """Tên sản phẩm lấy từ các <h4> (bỏ phần mã trong ngoặc) — dùng để phát hiện
+    anchor nằm LỌT trong tên sản phẩm."""
+    names = []
+    for m in H4_RE.finditer(final_html):
+        name = normalize_name(m.group(1))
+        name = re.sub(r"\s*\([^)]*\)\s*$", "", name).strip()
+        if len(name.split()) >= 2:
+            names.append(name)
+    return names
+
+
+def is_pdp(url):
+    """PDP = trang sản phẩm: đúng 2 segment và segment đầu không phải hệ bài viết."""
+    segs = [s for s in path_of(url).split("/") if s]
+    return len(segs) == 2 and segs[0] not in ("hoi-dap", "tin-tuc", "kinh-nghiem-hay", "game-app")
 
 
 def path_of(url):
@@ -54,15 +96,12 @@ def article_id(url):
 
 
 class Checker:
-    def __init__(self, cfg, nganh):
-        self.seg2nganh = {}
-        for ng, prefixes in cfg["nganh_hang"].items():
-            for p in prefixes:
-                self.seg2nganh[p] = ng
+    def __init__(self, cfg, nganh, article_seg=""):
+        self.cfg = cfg
         self.trung_tinh = set(cfg["trung_tinh"])
         self.brands = set(cfg.get("brand_tokens", []))
         self.nganh = nganh
-        self.phu_kien_ok = set(cfg.get("phu_kien_hop_le", {}).get(nganh, []))
+        self.article_seg = article_seg
 
     def is_brand_page(self, url):
         """Đích là trang hãng/dòng (vd /may-in-hp, /laptop-acer-aspire).
@@ -73,17 +112,9 @@ class Checker:
         segs = path_of(url).split("-")
         return any(b in segs for b in self.brands)
 
-    def nganh_of(self, url):
-        seg = first_segment(url)
-        if seg in self.trung_tinh:
-            return "trung-tinh"
-        # khớp prefix dài nhất: "laptop-acer-aspire" -> "laptop"
-        best = None
-        for p, ng in self.seg2nganh.items():
-            if seg == p or seg.startswith(p + "-"):
-                if best is None or len(p) > len(best[0]):
-                    best = (p, ng)
-        return best[1] if best else "khong-ro"
+    def cross_nganh(self, url):
+        """Ngành đích nếu lệch ngành bài (sau khi trừ phụ kiện hợp lệ), không thì None."""
+        return lc.is_cross(url, self.nganh, self.article_seg, self.cfg)
 
     def is_explainer(self, url):
         return first_segment(url) in ("hoi-dap", "tin-tuc")
@@ -95,7 +126,7 @@ def sentence_around(text, pos, width=170):
     return seg
 
 
-def check(workspace, cfg):
+def check(workspace, cfg, offline=False):
     ws = Path(workspace)
     final = (ws / "source" / "final-content.html").read_text(encoding="utf-8")
     src_file = ws / "source" / "source-content.html"
@@ -104,24 +135,30 @@ def check(workspace, cfg):
         src_urls = set(re.findall(r'href="([^"]+)"', src_file.read_text(encoding="utf-8")))
 
     slug = ws.name
-    nganh = "khong-ro"
-    for prefix, ng in cfg["nganh_theo_slug"].items():
-        if slug.startswith(prefix):
-            nganh = ng
-            break
-    ck = Checker(cfg, nganh)
+    url_file = ws / "source" / "article-url.txt"
+    self_url = url_file.read_text(encoding="utf-8").strip().splitlines()[0].strip() \
+        if url_file.exists() and url_file.read_text(encoding="utf-8").strip() else ""
+    nganh, article_seg = lc.article_nganh(slug, self_url, cfg)
+    ck = Checker(cfg, nganh, article_seg)
 
     self_ids = set()
-    url_file = ws / "source" / "article-url.txt"
-    if url_file.exists():
-        aid = article_id(url_file.read_text(encoding="utf-8").strip())
+    if self_url:
+        aid = article_id(self_url)
         if aid:
             self_ids.add(aid)
 
     info_zones = [(m.start(), m.end()) for m in INFO_RE.finditer(final)]
+    li_zones = [(m.start(), m.end()) for m in LI_RE.finditer(final)]
+    names = product_names(final)
     xemthem_urls = set()
     for m in XEMTHEM_RE.finditer(final):
         xemthem_urls.update(u for u, _ in LINK_RE.findall(m.group(0)))
+
+    # Trạng thái HTTP của mọi href nội bộ: link trong bài đã build phải trả 200
+    # và KHÔNG redirect. Đo một lượt, song song, cache trong cùng lần chạy.
+    http = {}
+    if not lr.offline(offline):
+        http = lr.resolve_many([u for u, _ in LINK_RE.findall(final) if lr.is_internal(u)])
 
     plain = strip_tags(final)
     findings, seen = [], {}
@@ -158,9 +195,8 @@ def check(workspace, cfg):
                               f"ngữ cảnh nói về '{anchor} {t.group(1)}', đích chỉ là '{path_of(url)}'"))
 
         # B4 — lệch ngành hàng bài
-        dest_ng = ck.nganh_of(url)
-        if (nganh != "khong-ro" and dest_ng not in ("trung-tinh", "khong-ro", nganh)
-                and first_segment(url) not in ck.phu_kien_ok):
+        dest_ng = ck.cross_nganh(url)
+        if dest_ng:
             cases.append(("B4", "cross-category",
                           f"bài ngành '{nganh}' nhưng đích thuộc ngành '{dest_ng}'"))
 
@@ -168,9 +204,68 @@ def check(workspace, cfg):
         if url in xemthem_urls and not in_info:
             cases.append(("D3", "dup-xem-them", "đích đã được dẫn trong box Xem thêm"))
 
+        # E1 — anchor nằm trong <li> khối thông số: dòng thông số không phải chỗ đi link
+        if any(a <= m.start() < b for a, b in li_zones) and in_info and url not in xemthem_urls:
+            cases.append(("E1", "spec-li-anchor",
+                          "anchor nằm trong <li> khối thông số, không phải câu văn"))
+
+        # E2 — tự xưng: anchor CHÍNH LÀ tên TGDĐ, hoặc đích là trang chủ.
+        # Chỉ khớp khi cả anchor là tên hãng mình — tiêu đề bài có đuôi "tại TGDĐ"
+        # là anchor hợp lệ của box Xem thêm, không phải lỗi.
+        if not path_of(url) or SELF_BRAND_RE.fullmatch(anchor.strip()):
+            cases.append(("E2", "self-brand-home",
+                          f"anchor/đích là chính TGDĐ hoặc trang chủ ('{anchor[:40]}')"))
+
+        # E3 — anchor lọt GIỮA tên sản phẩm mà đích không phải PDP của SP đó.
+        # Điều kiện: chữ trước anchor nối đúng phần đầu tên SP VÀ chữ sau anchor nối
+        # đúng phần đuôi. Anchor mở đầu một câu nói về hãng/dòng ("Asus là...") không
+        # thỏa vì phần đuôi tên SP không theo sau.
+        before = normalize_name(final[max(0, m.start() - 120): m.start()])
+        after_n = normalize_name(after)
+        anchor_n = normalize_name(anchor)
+        if anchor_n and not is_pdp(url):
+            for nm in names:
+                if anchor_n == nm or anchor_n not in nm:
+                    continue
+                cut = nm.index(anchor_n)
+                head, tail = nm[:cut].strip(), nm[cut + len(anchor_n):].strip()
+                if head and not before.endswith(head):
+                    continue
+                if tail and not after_n.startswith(tail.split()[0]):
+                    continue
+                if not head and not tail:
+                    continue
+                cases.append(("E3", "inside-product-name",
+                              f"anchor '{anchor}' là một phần tên SP '{nm}', đích lại là "
+                              f"'{path_of(url)}'"))
+                break
+
+        # F1 — anchor cắt nửa cụm: "laptop [HP]", "màn hình [OLED]".
+        # Chữ ngay trước anchor lấy nguyên văn từ HTML (strip_tags biến thẻ thành
+        # khoảng trắng), nên "laptop " vẫn còn nguyên khoảng cách để nhận cụm.
+        before_raw = strip_tags(final[max(0, m.start() - 80): m.start()])
+        full_phrase = la.partial_phrase_anchor(anchor, before_raw)
+        if full_phrase:
+            cases.append(("F1", "partial-phrase-anchor",
+                          f"anchor '{anchor}' cắt nửa cụm, phải bọc cả '{full_phrase}'"))
+
+        # F2/F3 — đích chết hoặc còn redirect. Link trong bài phải là URL CUỐI.
+        res = http.get(url)
+        if res:
+            verdict, why = lr.classify(res)
+            if verdict == "dead":
+                cases.append(("F2", "dead-link", f"đích không truy cập được ({why})"))
+            elif verdict == "offtopic":
+                cases.append(("F3", "redirect-offtopic", f"đích redirect lệch chủ đề: {why}"))
+            elif verdict == "redirect":
+                cases.append(("F3", "redirect-link",
+                              f"đích còn redirect, phải dùng URL cuối: {why}"))
+
         if cases:
             findings.append({
                 "cases": [c for c, _, _ in cases],
+                "severity": ("FAIL" if any(SEVERITY.get(c) == "FAIL" for c, _, _ in cases)
+                             else "WARN"),
                 "rules": [r for _, r, _ in cases],
                 "anchor": anchor, "url": url,
                 "inserted_by_optimizer": inserted, "in_info_block": in_info,
@@ -180,7 +275,10 @@ def check(workspace, cfg):
 
     total = len(LINK_RE.findall(final))
     return {"workspace": slug, "nganh_hang": nganh, "tong_link": total,
-            "so_findings": len(findings), "findings": findings}
+            "so_findings": len(findings),
+            "so_fail": sum(1 for f in findings if f["severity"] == "FAIL"),
+            "http_checked": bool(http),
+            "findings": findings}
 
 
 def strip_flagged_links(ws: Path, findings) -> int:
@@ -196,9 +294,13 @@ def strip_flagged_links(ws: Path, findings) -> int:
         backup.write_text(html_text, encoding="utf-8")
 
     # D2 (trùng URL) KHÔNG tự gỡ: hai link cùng URL có thể là 2 nút CTA đặt đầu
-    # và cuối bài — thiết kế cố ý. Người quyết, không để script quyết.
+    # và cuối bài — thiết kế cố ý. E2/E3 là heuristic ngữ cảnh, đọc câu mới biết
+    # đúng sai. F1 (anchor nửa cụm) và F3 (đích còn redirect) sửa bằng cách NỚI
+    # anchor / đổi href — gỡ link là mất luôn cái đang đúng. Chạy lại
+    # optimize_content.py là xong cả hai.
+    advisory = {"D2", "E2", "E3", "F1", "F3"}
     targets = {(f["anchor"].strip(), f["url"]) for f in findings
-               if f["cases"] != ["D2"]}
+               if not set(f["cases"]) <= advisory}
     removed = 0
 
     def repl(m):
@@ -221,16 +323,22 @@ def main():
     ap.add_argument("--fix", action="store_true",
                     help="GỠ các link bị gắn cờ khỏi final-content.html (giữ nguyên chữ). "
                          "Chỉ dùng SAU KHI người đã đọc từng câu và duyệt.")
+    ap.add_argument("--offline", action="store_true",
+                    help="Bỏ kiểm HTTP/redirect của href (không có mạng). "
+                         "Tương đương biến môi trường MWG_LINK_OFFLINE=1.")
     a = ap.parse_args()
 
     cfg = json.loads(MAP_FILE.read_text(encoding="utf-8"))
-    r = check(a.workspace, cfg)
+    r = check(a.workspace, cfg, offline=a.offline)
 
     if not a.quiet:
         print(f"\n{r['workspace']}  (ngành: {r['nganh_hang']}, {r['tong_link']} link) "
-              f"-> {r['so_findings']} nghi ngờ")
+              f"-> {r['so_findings']} nghi ngờ ({r['so_fail']} FAIL)")
+        if not r["http_checked"]:
+            print("  [WARN] chưa kiểm HTTP/redirect của href (offline).")
         for f in r["findings"]:
-            print(f"  [{'+'.join(f['cases'])}] {f['anchor'][:32]:34s} -> {path_of(f['url'])[:50]}")
+            print(f"  [{f['severity']}][{'+'.join(f['cases'])}] {f['anchor'][:32]:34s} "
+                  f"-> {path_of(f['url'])[:50]}")
             print(f"        {f['why']}")
     if a.json:
         Path(a.json).write_text(json.dumps(r, ensure_ascii=False, indent=2), encoding="utf-8")

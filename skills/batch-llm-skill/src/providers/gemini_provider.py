@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+import time
 import requests
 from .base import BatchProvider
+from .gemini_key_pool import GeminiKeyPool, RATE_LIMIT, TRANSIENT, OTHER, mask
 
 GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
@@ -15,12 +17,51 @@ INLINE_SIZE_LIMIT_BYTES = 20 * 1024 * 1024  # 20 MB
 class GeminiProvider(BatchProvider):
 
     def __init__(self):
-        self._api_key = os.environ.get("GOOGLE_API_KEY")
-        if not self._api_key:
-            raise RuntimeError("GOOGLE_API_KEY environment variable not set.")
+        # Nhiều key free: GEMINI_API_KEYS (phẩy), rồi GEMINI_API_KEY, rồi GOOGLE_API_KEY
+        self._pool = GeminiKeyPool(models=[])
+        self._api_key = self._pool.keys[0]
+        # Batch job thuộc về project của key đã submit → nhớ để poll/fetch đúng key
+        self._job_keys: dict[str, str] = {}
 
-    def _headers(self) -> dict:
-        return {"Content-Type": "application/json", "x-goog-api-key": self._api_key}
+    def _headers(self, key: str | None = None) -> dict:
+        return {"Content-Type": "application/json", "x-goog-api-key": key or self._api_key}
+
+    def _post_rotating(self, url: str, model: str, rounds: int = 3, **kwargs) -> tuple[requests.Response, str]:
+        """POST, gặp quota/rate-limit thì nhảy sang key kế; chỉ ngủ khi mọi key đều nghẽn."""
+        extra_headers = kwargs.pop("headers", {})
+        last_err = ""
+        for round_idx in range(rounds):
+            keys = self._pool.keys_for(model)
+            if not keys:
+                break
+            waitable = False
+            for key in keys:
+                resp = requests.post(url, headers={**self._headers(key), **extra_headers}, **kwargs)
+                if resp.ok:
+                    self._api_key = key
+                    return resp, key
+                last_err = f"{resp.status_code} " + " ".join(resp.text[:300].split())
+                kind = self._pool.report(key, model, last_err)
+                print(f"  [gemini {mask(key)} {model}] {kind}: {last_err[:100]}")
+                if kind == OTHER:
+                    # lỗi request, đổi key không cứu được
+                    resp.raise_for_status()
+                waitable = waitable or kind in (RATE_LIMIT, TRANSIENT)
+            if waitable and round_idx < rounds - 1:
+                time.sleep(35)
+        raise RuntimeError(f"Gemini: hết key dùng được cho {model} ({len(self._pool.keys)} key). Lỗi cuối: {last_err[:200]}")
+
+    def _get_job(self, url: str, batch_id: str, timeout: int) -> requests.Response:
+        """GET tài nguyên của một batch job; job lạ key thì dò lần lượt các key còn lại."""
+        known = self._job_keys.get(batch_id)
+        order = ([known] if known else []) + [k for k in self._pool.keys if k != known]
+        resp = None
+        for key in order:
+            resp = requests.get(url, headers=self._headers(key), timeout=timeout)
+            if resp.status_code not in (403, 404):
+                self._job_keys[batch_id] = key
+                return resp
+        return resp
 
     def submit_batch(self, jsonl_path: str, model: str) -> str:
         """
@@ -48,30 +89,26 @@ class GeminiProvider(BatchProvider):
                 }
             }
         }
-        resp = requests.post(
-            f"{GEMINI_API_BASE}/batches",
-            headers=self._headers(),
-            json=payload,
-            timeout=120,
-        )
-        resp.raise_for_status()
+        resp, key = self._post_rotating(f"{GEMINI_API_BASE}/batches", model, json=payload, timeout=120)
         data = resp.json()
         name = data.get("name", "")
         if not name:
             raise RuntimeError(f"Gemini batch create returned no job name: {data}")
+        self._job_keys[name] = key
         return name
 
     def _submit_via_file(self, jsonl_path: str, requests_list: list[dict], model: str) -> str:
         """Upload JSONL to Files API, then create batch with file reference (> 20MB)."""
-        file_name = self._upload_jsonl_file(jsonl_path)
+        file_name, key = self._upload_jsonl_file(jsonl_path, model)
         payload = {
             "batch": {
                 "input_config": {"file_name": file_name}
             }
         }
+        # File upload thuộc project của key vừa dùng → create batch bắt buộc cùng key, không xoay
         resp = requests.post(
             f"{GEMINI_API_BASE}/batches",
-            headers=self._headers(),
+            headers=self._headers(key),
             json=payload,
             timeout=120,
         )
@@ -80,20 +117,21 @@ class GeminiProvider(BatchProvider):
         name = data.get("name", "")
         if not name:
             raise RuntimeError(f"Gemini batch create (file mode) returned no job name: {data}")
+        self._job_keys[name] = key
         return name
 
-    def _upload_jsonl_file(self, path: str) -> str:
-        """Upload file via Files API, return file name (e.g. 'files/abc123')."""
+    def _upload_jsonl_file(self, path: str, model: str) -> tuple[str, str]:
+        """Upload file via Files API, return (file name e.g. 'files/abc123', key đã dùng)."""
         with open(path, "rb") as f:
             data = f.read()
-        resp = requests.post(
+        resp, key = self._post_rotating(
             f"{GEMINI_API_BASE}/files",
-            headers={**self._headers(), "Content-Type": "application/jsonl"},
+            model,
+            headers={"Content-Type": "application/jsonl"},
             data=data,
             timeout=120,
         )
-        resp.raise_for_status()
-        return resp.json().get("file", {}).get("name", "")
+        return resp.json().get("file", {}).get("name", ""), key
 
     def poll_status(self, batch_id: str) -> dict:
         """
@@ -101,7 +139,7 @@ class GeminiProvider(BatchProvider):
         Returns normalized dict with status, output_file_id, error_message.
         """
         url = f"{GEMINI_API_BASE}/{batch_id}"
-        resp = requests.get(url, headers=self._headers(), timeout=30)
+        resp = self._get_job(url, batch_id, timeout=30)
         resp.raise_for_status()
         data = resp.json()
 
@@ -151,13 +189,12 @@ class GeminiProvider(BatchProvider):
                 "maxOutputTokens": max_output_tokens,
             },
         }
-        resp = requests.post(
+        resp, _ = self._post_rotating(
             f"{GEMINI_API_BASE}/{model_name}:generateContent",
-            headers=self._headers(),
+            model_name,
             json=payload,
             timeout=120,
         )
-        resp.raise_for_status()
         data = resp.json()
         candidates = data.get("candidates", [])
         choice = candidates[0] if candidates else {}
@@ -178,7 +215,7 @@ class GeminiProvider(BatchProvider):
     def _fetch_inline_results(self, batch_id: str) -> list[dict]:
         """Parse results from dest.inlinedResponses in the completed batch job."""
         url = f"{GEMINI_API_BASE}/{batch_id}"
-        resp = requests.get(url, headers=self._headers(), timeout=60)
+        resp = self._get_job(url, batch_id, timeout=60)
         resp.raise_for_status()
         data = resp.json()
 
@@ -197,11 +234,7 @@ class GeminiProvider(BatchProvider):
 
     def _fetch_file_results(self, file_name: str) -> list[dict]:
         """Download JSONL output file from Files API and parse each line."""
-        resp = requests.get(
-            f"{GEMINI_API_BASE}/{file_name}:download",
-            headers={**self._headers(), "Content-Type": None},
-            timeout=120,
-        )
+        resp = self._get_job(f"{GEMINI_API_BASE}/{file_name}:download", file_name, timeout=120)
         resp.raise_for_status()
 
         results = []

@@ -9,8 +9,9 @@ TAB = 'skill_infobox'
 GOC = os.path.expanduser('~/viet-content-infobox/infobox-pim')   # nằm trong workspace Antigravity
 ANH = os.path.expanduser('~/.claude/skills/blog-hoi-dap-tron-goi/scripts')
 MDM_CLI = os.path.expanduser('~/.claude/skills/onpage-mdm-khai-bao/scripts/mdm-cli.mjs')
-MDM_ENV = {**os.environ, 'CHROME_DEVTOOLS_MCP_BIN': os.path.expanduser('~/.local/bin/devtools-mcp-bridge'),
-           'MDM_CONFIG': os.path.join(SKILL, 'mdm.config.json')}
+_cfg_file = os.path.join(SKILL, 'mdm.config.json') if os.path.exists(os.path.join(SKILL, 'mdm.config.json')) else os.path.join(SKILL, 'mdm.config.example.json')
+MDM_ENV = {**os.environ, 'CHROME_DEVTOOLS_MCP_BIN': os.environ.get('CHROME_DEVTOOLS_MCP_BIN', os.path.expanduser('~/.local/bin/devtools-mcp-bridge')),
+           'MDM_CONFIG': os.environ.get('MDM_CONFIG', _cfg_file)}
 HOTLINE, HOTLINE_TEL, WEB = '1900 232 460', '1900232460', 'thegioididong.com'   # mặc định TGDĐ, bài TopZone dùng SITES
 CMS_TZ = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cms_infobox_tz.mjs')
 

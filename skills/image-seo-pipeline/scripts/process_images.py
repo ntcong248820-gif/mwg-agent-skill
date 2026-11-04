@@ -30,10 +30,17 @@ except ImportError as e:
     print("Install: pip install google-genai Pillow")
     sys.exit(1)
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from gemini_key_pool import GeminiKeyPool, RATE_LIMIT, mask  # noqa: E402
+
 # ─── Constants ──────────────────────────────────────────────────────────────
 AUTHOR          = "Thegioididong.com"
 COPYRIGHT       = "Copyright © Thegioididong.com"
-GEMINI_MODELS   = ["gemini-2.5-flash", "gemini-2.5-flash-lite"]
+# Thứ tự ưu tiên model. Hai alias "-latest" để cuối vì key tạo sau bị chặn 2.5-flash /
+# 2.5-flash-lite ("no longer available to new users") nhưng vẫn dùng được alias.
+GEMINI_MODELS   = ["gemini-2.5-flash", "gemini-2.5-flash-lite",
+                   "gemini-flash-latest", "gemini-flash-lite-latest"]
+MAX_ROUNDS      = 3   # số vòng quét hết mọi cặp key×model cho 1 ảnh
 COMPRESS_QUALITY = 85
 IMAGE_EXTS      = ("*.jpg", "*.jpeg", "*.png", "*.webp")
 
@@ -65,7 +72,7 @@ def collect_images(orig_dir: Path) -> list[Path]:
     return sorted(set(images))
 
 
-def call_gemini(client, img_path: Path, topic_prefix: str) -> Optional[dict]:
+def call_gemini(pool: GeminiKeyPool, clients: dict, img_path: Path, topic_prefix: str) -> Optional[dict]:
     """Gọi Gemini API để sinh alt, title, description tiếng Việt cho SEO."""
     prompt = f"""Analyze this product/marketing image in the context of '{topic_prefix}' (a TGDD/Thegioididong.com article topic).
 Output a JSON object with:
@@ -91,10 +98,17 @@ Output a JSON object with:
     )
 
     img = Image.open(img_path)
-    max_retries = 3
 
-    for model_name in GEMINI_MODELS:
-        for attempt in range(max_retries):
+    # Mỗi vòng thử lần lượt mọi cặp (key, model) còn sống. Hết quota ngày / model bị chặn
+    # thì cặp đó bị loại hẳn; quá RPM thì nhảy cặp kế ngay, chỉ ngủ khi cả vòng đều nghẽn.
+    for round_idx in range(MAX_ROUNDS):
+        rate_limited = False
+        for key, model_name in pool.combos():
+            if not pool.alive(key, model_name):
+                continue
+            client = clients.get(key)
+            if client is None:
+                client = clients[key] = genai.Client(api_key=key)
             try:
                 resp = client.models.generate_content(
                     model=model_name,
@@ -104,15 +118,13 @@ Output a JSON object with:
                 return json.loads(resp.text)
             except Exception as e:
                 err = str(e)
-                print(f"    [{model_name}] Attempt {attempt+1} failed: {err[:80]}")
-                if "GenerateRequestsPerDay" in err:
-                    raise RuntimeError("QUOTA_EXHAUSTED")
-                elif "429" in err or "RESOURCE_EXHAUSTED" in err:
-                    time.sleep(35)
-                elif "503" in err or "UNAVAILABLE" in err:
-                    time.sleep(10)
-                else:
-                    time.sleep(5)
+                kind = pool.report(key, model_name, err)
+                print(f"    [{mask(key)} {model_name}] {kind}: {err[:80]}")
+                rate_limited = rate_limited or kind == RATE_LIMIT
+        if pool.exhausted:
+            raise RuntimeError("QUOTA_EXHAUSTED")
+        if round_idx < MAX_ROUNDS - 1:
+            time.sleep(35 if rate_limited else 10)
     return None
 
 
@@ -201,7 +213,8 @@ def main():
     images = collect_images(orig_dir) if orig_dir.exists() else []
     print(f"[INFO] Found {len(images)} original images, {len(processed_originals)} already recorded in CSV.\n")
 
-    client = None
+    pool = None
+    clients: dict = {}
     metadata_rows = list(processed_originals.values())
     quota_exhausted = False
     stats = {"done": 0, "skipped": 0, "watch": 0, "reprocessed_exif": 0, "error": 0}
@@ -225,9 +238,10 @@ def main():
                 stats["skipped"] += 1
             continue
 
-        # Lazy init client
-        if client is None and not quota_exhausted:
-            client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY"))
+        # Lazy init pool — chỉ đọc key khi thật sự có ảnh cần gọi Gemini
+        if pool is None and not quota_exhausted:
+            pool = GeminiKeyPool(GEMINI_MODELS)
+            print(f"[INFO] Gemini key pool: {pool.status_line()}")
 
         print(f"{label} → processing...")
 
@@ -249,7 +263,7 @@ def main():
 
         try:
             # Gọi Gemini API sinh Alt/Title/Desc
-            data = call_gemini(client, img_path, topic_prefix)
+            data = call_gemini(pool, clients, img_path, topic_prefix)
             if data is None:
                 raise RuntimeError("No response from Gemini after all retries")
 
@@ -279,7 +293,7 @@ def main():
 
         except RuntimeError as e:
             if "QUOTA_EXHAUSTED" in str(e):
-                print("  [WARN] Daily quota exhausted — switching to fallback mode")
+                print(f"  [WARN] Mọi key đã hết quota ngày ({len(pool.keys)} key) — switching to fallback mode")
                 quota_exhausted = True
                 compress_image(img_path, proc_img)
                 inject_exif(proc_img, topic_prefix, f"Hình ảnh {topic_prefix} {img_path.stem}")

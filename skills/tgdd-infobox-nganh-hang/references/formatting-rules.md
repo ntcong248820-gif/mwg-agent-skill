@@ -1,5 +1,24 @@
 # Quy tắc cấu trúc và định dạng
 
+## Self-link ở sapo
+
+Sapo (H2) phải có đúng 1 self-link trỏ về chính URL danh mục đang viết bài.
+
+- Anchor là từ khóa chính của bài — từ khóa có volume cao nhất trong Sheet
+  "All KW" ứng với URL danh mục này (xem `references/research-rules.md` mục
+  "Đa dạng hóa từ khóa"). Gắn link ngay ở lần xuất hiện đầu tiên của từ khóa
+  đó trong câu sapo, không viết thêm câu chỉ để có chỗ nhét anchor.
+- href là chính URL danh mục đang viết, không phải URL khác và không phải
+  trang chi tiết sản phẩm. Dùng `rel="noopener noreferrer" target="_blank"`
+  như các link khác trong bài.
+- Đây là một ngoại lệ khác được chèn link tay ngay khi viết draft, bên cạnh
+  ngoại lệ cột tên sản phẩm ở bảng "Các sản phẩm ... nổi bật tại Thế Giới Di
+  Động". Ngoại lệ này không cần verify qua `curl` như ngoại lệ kia vì link
+  trỏ về chính URL đang viết, không phải nguồn khác — nhưng vẫn phải gõ đúng
+  URL danh mục, không suy đoán hay gõ sai chính tả.
+- Chỉ 1 self-link duy nhất trong toàn bài, đặt ở sapo. Không lặp lại self-link
+  này ở heading hay đoạn văn khác trong bài.
+
 ## Chọn đúng dạng trình bày
 
 - Dùng đoạn văn để giải thích nguyên nhân, tác động và nhận định.

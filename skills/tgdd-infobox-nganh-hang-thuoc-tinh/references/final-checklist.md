@@ -23,7 +23,7 @@
 - [ ] Section "Nên chọn ... theo nhu cầu" chia H4 theo từng nhu cầu, không gộp thành một đoạn văn dài.
 - [ ] Section thương hiệu chỉ có dẫn đoạn + bảng + kết đoạn, KHÔNG có H4 cho từng hãng.
 - [ ] Danh sách thương hiệu đã phủ đủ các nhóm của ngành hàng (hãng lâu năm, hãng linh kiện, hãng chuyên phân khúc, hãng nội địa, hãng có nền tảng riêng), không dừng ở vài hãng.
-- [ ] Section sản phẩm nổi bật có bảng khoảng 5 sản phẩm bán chạy với tên, thông số và giá thật từ danh mục.
+- [ ] Section sản phẩm nổi bật có bảng khoảng 5 sản phẩm bán chạy với tên, thông số, giá thật từ danh mục, và cột "Điểm mạnh & phù hợp với" so sánh tương đối giữa các sản phẩm trong bảng (không suy rộng danh tiếng hãng/dòng cao cấp sang sản phẩm chưa kiểm chứng).
 - [ ] Ba section loại / thương hiệu / sản phẩm không lẫn vai nhau.
 
 
@@ -33,6 +33,8 @@
 - [ ] Section chính dùng H3.
 - [ ] Heading con và câu hỏi FAQ dùng H4.
 - [ ] Không dùng H1.
+- [ ] Không còn số thứ tự thủ công trước heading (`1. `, `2. `...) — kể cả khi
+      bài gốc (bản biên tập) có đánh số, bản giao vẫn phải bỏ số.
 
 ## Cách viết
 
@@ -53,6 +55,7 @@
 - [ ] Mỗi ý là một câu hoàn chỉnh có chủ ngữ; không có đoạn dồn nhiều ý bằng dấu phẩy theo kiểu gạch đầu dòng viết liền.
 - [ ] Trong mỗi đoạn văn xuôi có tối đa một dấu `:`; không dùng `:` thay động từ (viết "máy có màn hình 14 inch", không viết "màn hình: 14 inch"). Nhãn bullet `- **Tên:** ...` và câu dẫn vào list/bảng KHÔNG tính.
 - [ ] Không còn từ khó hiểu kiểu "hậu tố H/U" (viết "chip H", "chip U"), "tiết giảm", "định vị", "đánh đổi" — đã thay bằng từ người mua dùng hằng ngày.
+- [ ] Đã đọc lại bài bằng con mắt người mua phổ thông: mọi thuật ngữ lạ (TGP, NPU, WUXGA, xung nhịp, render...) đã được giải thích 1 lần bằng lời thường hoặc đã thay bằng cách nói đời thường; dãy số đánh cấp (RTX, Core i, Ryzen) có câu cho biết số nào mạnh hơn; thuật ngữ quá phổ biến (CPU, RAM, SSD...) không bị giải thích thừa.
 
 ## CTA
 
@@ -94,6 +97,8 @@
 - [ ] Số link trong cột tên = số dòng sản phẩm; không dòng nào bị bỏ sót hoặc trùng URL.
 - [ ] Anchor là toàn bộ tên sản phẩm trong ô, không cắt lẻ.
 - [ ] Ngoài cột tên sản phẩm, không ô nào khác trong bảng có link.
+- [ ] Bảng có đủ cột "Điểm mạnh & phù hợp với", nội dung so sánh tương đối
+      giữa các sản phẩm trong bảng, không lặp lại nguyên văn cột thông số.
 - [ ] Giá trong bảng đã đối chiếu với giá hiển thị trên trang danh mục trong cùng lượt
       lấy URL; giá lệch thì đã sửa kèm cập nhật mốc ngày.
 
@@ -105,3 +110,9 @@
 - [ ] Link đặt trong văn xuôi (dẫn đoạn/kết đoạn), không đặt trong ô bảng.
 - [ ] Mỗi URL chỉ chèn 1 lần trong toàn bài; không lặp cùng URL hãng ở cả dẫn đoạn
       lẫn kết đoạn.
+
+## Self-link ở sapo
+
+- [ ] Sapo H2 có đúng 1 self-link về chính URL danh mục đang viết.
+- [ ] Anchor là từ khóa chính (volume cao nhất theo Sheet "All KW" cho URL này).
+- [ ] Không lặp lại self-link này ở heading hay đoạn văn khác trong bài.

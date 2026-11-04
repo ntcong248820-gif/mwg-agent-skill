@@ -13,11 +13,10 @@ Pipeline tối ưu HTML source content cho bài viết/infobox TGDĐ:
 
 Usage:
     python3 .agents/skills/content-html-optimizer/scripts/optimize_content.py \
-        --workspace content-workspaces/{topic-slug} \
+        --workspace mwg-content-editor/content-workspaces/{topic-slug} \
         [--fetch-links] [--links-json custom_links.json]
 """
 
-import os
 import argparse
 import csv
 import json
@@ -29,22 +28,16 @@ import sys
 from pathlib import Path
 from bs4 import BeautifulSoup, NavigableString
 
+from verify_cdn_urls import DEFAULT_BASE, infer_base  # cùng thư mục scripts/
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import link_anchor as la  # noqa: E402
+import link_category as lc  # noqa: E402
+import link_redirect as lr  # noqa: E402
+
 # ─── Constants ──────────────────────────────────────────────────────────────
-def _require(name, value, hint):
-    """Fail loudly instead of querying the wrong spreadsheet with an empty id."""
-    if not value:
-        raise SystemExit(
-            "%s is not set.\n"
-            "Export it to point this skill at your own sheet:\n"
-            "    export %s=<spreadsheet-id>\n"
-            "%s" % (name, name, hint))
-    return value
-
-
-SHEET_ALL_KW_ID = _require("SHEET_ALL_KW_ID", os.environ.get("SHEET_ALL_KW_ID", ""),
-    "Sheet holding keyword -> URL rows.")
-SHEET_BAI_TIN_ID = _require("SHEET_BAI_TIN_ID", os.environ.get("SHEET_BAI_TIN_ID", ""),
-    "Sheet holding article title -> URL rows.")
+SHEET_ALL_KW_ID = os.environ.get("SHEET_ALL_KW_ID", "")
+SHEET_BAI_TIN_ID = os.environ.get("SHEET_BAI_TIN_ID", "")
 
 # Sàn số dòng đọc được từ 2 Sheet. Đặt thấp hơn nhiều so với kích thước thật
 # (06/09/2026: 15941 và 6843) để Sheet co giãn bình thường không chạm sàn, nhưng
@@ -60,6 +53,9 @@ TABLE_BORDER_COLOR = "#cccccc"
 TABLE_HEADER_BG = "#000000"
 TABLE_HEADER_COLOR = "#ffe14c"
 TABLE_HIGHLIGHT_COLOR = "#d9381e"
+# Header chữ to hơn body: <table> đặt font-size 14px, <th> kế thừa nên chữ tiêu đề
+# cột nhỏ bằng chữ trong ô, reviewer đọc bảng không phân biệt được đâu là header.
+TABLE_HEADER_FONT_SIZE_PX = 16
 PRICE_COLUMN_WIDTH_PCT = 15
 # Cột giá dùng width px cố định, KHÔNG dùng %. Lý do: 15% chỉ đủ chỗ ở bề rộng
 # desktop (15% của 620px = 93px). Trên mobile 375px container còn ~355px thì 15%
@@ -260,6 +256,27 @@ def _has_brand_context_before(before_text: str) -> bool:
     """True khi ngay trước tên hãng là từ chỉ hãng/ngành hàng."""
     tail = re.sub(r"\s+", " ", before_text.lower()).rstrip()
     return any(tail.endswith(w) for w in BRAND_CONTEXT_WORDS)
+
+
+# --- Anchor phải trọn nghĩa: "laptop HP", không phải "laptop [HP]" ---------
+# Rule và danh sách danh từ đầu cụm nằm ở `link_anchor.py` vì QC dùng lại y hệt.
+
+
+def _prev_link_ends_with_head_noun(node, before_text: str) -> bool:
+    """True khi danh từ đầu cụm đã nằm trong MỘT LINK KHÁC ngay trước match.
+
+    Ví dụ `<a>laptop</a> HP`: nới anchor thì phải cắt vào thẻ <a> đang có, còn
+    chèn nguyên như cũ thì ra hai link cạnh nhau, cái sau vẫn là nửa chữ. Bỏ khớp
+    là cách duy nhất không làm hỏng link đã có.
+    """
+    if before_text.strip():
+        return False
+    prev = node.previous_sibling
+    while prev is not None and isinstance(prev, NavigableString) and not str(prev).strip():
+        prev = prev.previous_sibling
+    if prev is None or getattr(prev, "name", None) != "a":
+        return False
+    return la.ends_with_head_noun(prev.get_text())
 
 
 def _clean_inline_text(tag) -> str:
@@ -463,6 +480,9 @@ def insert_internal_links(soup: BeautifulSoup, links: list[dict], self_url: str 
     - Rule 4: Loại bỏ match sai ngữ cảnh (ví dụ: 'di động' trong 'Thế Giới Di Động' không trỏ về trang Điện thoại ĐTDĐ, 'máy tính' trong laptop không trỏ về Máy tính để bàn).
     - Rule 5: Tên hãng trần chỉ link ở chỗ đang nói về hãng, không link khi hãng
       là một phần tên công nghệ/dòng máy ('Acer' trong 'Acer ComfyView').
+    - Rule 6: Anchor phải trọn nghĩa — tên hãng/công nghệ một chữ đứng sau danh từ
+      đầu cụm thì bọc cả danh từ ('laptop HP', 'màn hình OLED'), không để
+      'laptop <a>HP</a>'.
     """
     inserted_records = []
     used_urls = set()
@@ -586,6 +606,18 @@ def insert_internal_links(soup: BeautifulSoup, links: list[dict], self_url: str 
                                     break
                         if skip_match:
                             continue
+
+                        # 2b. Anchor trọn nghĩa: tên hãng/công nghệ trần đứng sau
+                        #     danh từ đầu cụm thì bọc cả danh từ ("laptop HP",
+                        #     "màn hình OLED"), không để lại một chữ lẻ có link.
+                        if la.is_single_latin_token(kw):
+                            if _prev_link_ends_with_head_noun(node, before_text):
+                                continue
+                            head = la.head_noun_span_before(before_text)
+                            if head:
+                                head_start, head_raw = head
+                                raw_matched = head_raw + raw_matched
+                                before_text = before_text[:head_start]
 
                         # 3. Trim khoảng trắng thừa trong anchor text để thẻ <a> không bị lỡ space
                         l_trim = len(raw_matched) - len(raw_matched.lstrip())
@@ -753,10 +785,43 @@ def _cell_style(is_price: bool, width_pct=None, highlight=False, is_header=False
         f"padding: 8px 10px; text-align: {align}; vertical-align: middle; {wrap}"
     )
     if is_header:
-        style += f" background: {TABLE_HEADER_BG}; color: {TABLE_HEADER_COLOR}; font-weight: bold;"
+        style += (f" background: {TABLE_HEADER_BG}; color: {TABLE_HEADER_COLOR}; font-weight: bold;"
+                  f" font-size: {TABLE_HEADER_FONT_SIZE_PX}px;")
     elif highlight:
         style += f" font-weight: bold; color: {TABLE_HIGHLIGHT_COLOR};"
     return style
+
+
+def _unwrap_cell_paragraphs(cell, soup):
+    """Giữ mỗi đoạn trong ô bảng là một <p> riêng, bỏ đoạn rỗng và style của <p>.
+
+    KHÔNG dùng <br/> để ngắt dòng trong ô: site TGDĐ bỏ <br/> trong <td> khi render
+    (CMS vẫn lưu), nên các gạch đầu dòng "- ..." dính thành một dòng. <p> thì sống.
+    Không unwrap hẳn vì xuống dòng trong source HTML bị trình duyệt coi là khoảng trắng.
+    """
+    for p in cell.find_all("p"):
+        if not p.get_text(strip=True):
+            p.decompose()
+        else:
+            p.attrs = {}
+    if cell.find("br") and not cell.find("p"):
+        # Ô ngắt dòng bằng <br/> (không có <p>): tách mỗi đoạn thành <p> riêng
+        groups, cur = [], []
+        for node in list(cell.contents):
+            if getattr(node, "name", None) == "br":
+                groups.append(cur)
+                cur = []
+            else:
+                cur.append(node.extract())
+        groups.append(cur)
+        cell.clear()
+        for nodes in groups:
+            if not "".join(n.get_text() if hasattr(n, "get_text") else str(n) for n in nodes).strip():
+                continue
+            p = soup.new_tag("p")
+            for n in nodes:
+                p.append(n)
+            cell.append(p)
 
 
 def normalize_tables(soup: BeautifulSoup):
@@ -807,8 +872,7 @@ def normalize_tables(soup: BeautifulSoup):
         header_cells = rows[0].find_all(["td", "th"])
         for cell in header_cells:
             cell.name = "th"
-            for p in cell.find_all("p"):
-                p.unwrap()
+            _unwrap_cell_paragraphs(cell, soup)
 
         profile = _table_column_profile(table)
         widths = _compute_column_widths(profile) if profile else None
@@ -823,8 +887,7 @@ def normalize_tables(soup: BeautifulSoup):
             cells = row.find_all(["td", "th"])
             for cell in cells:
                 cell.name = "td"
-                for p in cell.find_all("p"):
-                    p.unwrap()
+                _unwrap_cell_paragraphs(cell, soup)
             for i, td in enumerate(cells):
                 is_price = bool(profile) and i < len(profile) and profile[i]["is_price"]
                 width_pct = widths[i] if widths and i < len(widths) else None
@@ -966,7 +1029,197 @@ def normalize_lineup_links(soup: BeautifulSoup):
                     c1.append(a_tag)
 
 
+def _kw_equivalent(a: str, b: str) -> bool:
+    """Hai keyword coi là nói về cùng một vật khi cụm này chứa TRỌN cụm kia.
+
+    "laptop hp" ↔ "hp" là cùng vật; "laptop hp" ↔ "laptop dell" thì không. Khớp
+    theo ranh giới từ, nếu không "hp" sẽ khớp bừa vào "hpx", "thp".
+    """
+    fa, fb = _fold(a).strip(), _fold(b).strip()
+    if not fa or not fb:
+        return False
+    if fa == fb:
+        return True
+    short, long_ = (fa, fb) if len(fa) < len(fb) else (fb, fa)
+    return bool(re.search(rf"(?:^|\s){re.escape(short)}(?:\s|$)", long_))
+
+
+def find_link_replacement(keyword: str, broken_url: str, pool: list[dict],
+                          cat_cfg, art_nganh, art_seg, offline: bool = False):
+    """Ứng viên thay thế còn sống cho một link hỏng, hoặc None.
+
+    Thứ tự ưu tiên: cùng keyword trước (Sheet thường có nhiều URL cho một
+    keyword), rồi tới keyword tương đương. Mọi ứng viên phải thoả **cả ba**:
+
+    1. cùng loại đích (`lr.dest_kind`) — bài hỏi đáp thay bài hỏi đáp, danh mục
+       thay danh mục;
+    2. không lệch ngành hàng của bài (cùng `link_category` như lúc chèn link);
+    3. tự chứng minh là 200 sạch (`lr.alive_final`) — "không đo được" KHÔNG được
+       nhận làm hàng thay thế, vì đây là URL mới đưa vào bài.
+
+    Trả `(url_moi, keyword_ung_vien)`.
+    """
+    if lr.offline(offline) or not broken_url:
+        return None
+    want_kind = lr.dest_kind(broken_url)
+    same_kw, related = [], []
+    seen = {lr.path_of(broken_url)}
+    for cand in pool:
+        url = (cand.get("url") or "").strip()
+        if not url or lr.path_of(url) in seen:
+            continue
+        if lr.dest_kind(url) != want_kind:
+            continue
+        if lc.is_cross(url, art_nganh, art_seg, cat_cfg):
+            continue
+        ckw = cand.get("keyword", "")
+        if _fold(ckw).strip() == _fold(keyword).strip():
+            same_kw.append((ckw, url))
+            seen.add(lr.path_of(url))
+        elif _kw_equivalent(ckw, keyword):
+            related.append((ckw, url))
+            seen.add(lr.path_of(url))
+    for ckw, url in same_kw + related:
+        final = lr.alive_final(url, offline_mode=offline)
+        if final:
+            return final, ckw
+    return None
+
+
+def resolve_link_redirects(links: list[dict], article_text: str, cat_cfg=None,
+                           art_nganh=None, art_seg="", offline: bool = False) -> list[dict]:
+    """Thay URL đích bằng URL CUỐI (sau redirect) trước khi chèn, xử lý link hỏng.
+
+    Chỉ đo những URL có cơ hội được chèn — keyword phải thật sự xuất hiện trong
+    bài. Danh sách từ 2 Sheet có hàng nghìn dòng; đo hết là vài nghìn request cho
+    vài chục link dùng được.
+
+    Xử lý theo `link_redirect.classify()`:
+      - `redirect` → thay URL (bài tin cũ `hoi-dap/bv-{id}` đổi sang slug thật)
+      - `offtopic`/`dead` → **tìm ứng viên thay thế còn sống cùng keyword/ngành**
+        trước, không tìm được mới bỏ link
+      - `unknown` → giữ nguyên, in WARN một dòng tổng (không kết luận khi không
+        đo được, nếu không mất mạng là rụng sạch link)
+    """
+    candidates = [it for it in links if it["keyword"].strip().lower() in article_text]
+    if not candidates:
+        return links
+    if lr.offline(offline):
+        print(f"[WARN] Bo qua resolve redirect ({len(candidates)} URL) — che do offline.")
+        return links
+
+    print(f"[INFO] Resolve redirect cho {len(candidates)} URL dich...")
+    results = lr.resolve_many([it["url"] for it in candidates])
+
+    out, dropped, replaced, unknown = [], 0, 0, 0
+    for item in links:
+        res = results.get(item["url"])
+        if not res:
+            out.append(item)
+            continue
+        verdict, why = lr.classify(res)
+        if verdict == "ok":
+            out.append(item)
+        elif verdict == "redirect":
+            print(f"  [REDIRECT] {item['keyword']}: {lr.path_of(item['url'])} -> "
+                  f"{lr.path_of(res['final_url'])}")
+            out.append({**item, "url": res["final_url"], "url_before_redirect": item["url"]})
+        elif verdict == "unknown":
+            unknown += 1
+            out.append(item)
+        else:
+            alt = find_link_replacement(item["keyword"], item["url"], candidates,
+                                        cat_cfg, art_nganh, art_seg, offline=offline)
+            if alt:
+                new_url, via_kw = alt
+                replaced += 1
+                print(f"  [THAY] {item['keyword']}: {lr.path_of(item['url'])} ({why}) -> "
+                      f"{lr.path_of(new_url)} (ung vien '{via_kw}')")
+                out.append({**item, "url": new_url, "url_before_redirect": item["url"],
+                            "replaced_reason": why})
+            else:
+                dropped += 1
+                print(f"  [GO] bo link '{item['keyword']}' -> {lr.path_of(item['url'])}: "
+                      f"{why}; khong co ung vien thay the con song")
+    if unknown:
+        print(f"  [WARN] {unknown} URL khong do duoc (mang/chan bot) — giu nguyen, kiem lai tay.")
+    print(f"[DONE] Resolve redirect: thay {replaced}, bo {dropped} link chet/lech dich.")
+    return out
+
+
+def rewrite_redirected_hrefs(soup: BeautifulSoup, pool: list[dict] = None, cat_cfg=None,
+                             art_nganh=None, art_seg="", offline: bool = False) -> tuple[int, list]:
+    """Đưa mọi href nội bộ trong bài về URL cuối, xử lý triệt để link hỏng.
+
+    Trả `(số_href_đổi_URL, list_dòng_log)`. Ba nhánh:
+
+    - `redirect` → đổi href sang URL cuối.
+    - `dead`/`offtopic` → tìm bài/trang tương đương trong pool Sheet theo anchor
+      (cùng loại đích, cùng ngành, ứng viên phải trả 200 sạch). Có thì đổi href;
+      **không có thì gỡ thẻ `<a>` nhưng giữ nguyên chữ**.
+    - `unknown` → giữ nguyên.
+
+    Trước 29/09/2026 nhánh hỏng chỉ in cảnh báo rồi để nguyên href. Owner chốt
+    bỏ cách đó: link dẫn về trang chủ/404 nằm lại trong bài đã air thì cảnh báo
+    trong log không cứu được người đọc. Gỡ vẫn giữ chữ nên câu văn không đứt.
+    """
+    if lr.offline(offline):
+        return 0, []
+    hrefs = [a.get("href", "").strip() for a in soup.find_all("a", href=True)]
+    targets = [h for h in hrefs if lr.is_internal(h)]
+    if not targets:
+        return 0, []
+    results = lr.resolve_many(targets)
+    pool = pool or []
+
+    fixed, logs = 0, []
+    for a in list(soup.find_all("a", href=True)):
+        res = results.get(a["href"].strip())
+        if not res:
+            continue
+        verdict, why = lr.classify(res)
+        if verdict == "redirect":
+            a["href"] = res["final_url"]
+            fixed += 1
+        elif verdict in ("dead", "offtopic"):
+            anchor = a.get_text(" ", strip=True)
+            alt = find_link_replacement(anchor, res["url"], pool, cat_cfg,
+                                        art_nganh, art_seg, offline=offline)
+            if alt:
+                new_url, via_kw = alt
+                logs.append(f"[THAY] href co san '{anchor[:40]}': {lr.path_of(res['url'])} "
+                            f"({why}) -> {lr.path_of(new_url)} (ung vien '{via_kw}')")
+                a["href"] = new_url
+                fixed += 1
+            else:
+                logs.append(f"[GO] go link '{anchor[:40]}' -> {lr.path_of(res['url'])} "
+                            f"({why}); khong co ung vien thay the, giu nguyen chu")
+                a.unwrap()
+    return fixed, logs
+
+
 # ─── Main Pipeline ───────────────────────────────────────────────────────────
+
+def justify_body_paragraphs(soup: BeautifulSoup) -> int:
+    """Canh đều (justify) các đoạn văn thân bài để CMS không hiển thị lệch.
+
+    Bỏ qua đoạn nằm trong bảng/danh sách, đoạn chứa ảnh, đoạn shortcode
+    (bắt đầu bằng "[") và đoạn đã tự khai text-align.
+    """
+    count = 0
+    for p in soup.find_all("p"):
+        if p.find_parent(["table", "li"]) or p.find("img"):
+            continue
+        text = p.get_text(strip=True)
+        if not text or text.startswith("["):
+            continue
+        style = (p.get("style") or "").strip()
+        if "text-align" in style:
+            continue
+        p["style"] = (style.rstrip(";") + "; " if style else "") + "text-align: justify;"
+        count += 1
+    return count
+
 
 def main():
     parser = argparse.ArgumentParser(description="Optimize HTML source content for MWG content workspaces")
@@ -978,6 +1231,9 @@ def main():
                              "Lap duoc nhieu lan. Cong voi metadata/no-link-anchors.txt.")
     parser.add_argument("--self-url", help="URL live cua chinh bai nay, de khong chen link tro ve chinh no. "
                                            "Neu bo trong, doc tu source/article-url.txt")
+    parser.add_argument("--offline", action="store_true",
+                        help="Bo qua buoc resolve redirect URL dich (khong co mang). "
+                             "Tuong duong bien moi truong MWG_LINK_OFFLINE=1.")
     args = parser.parse_args()
 
     workspace = Path(args.workspace).resolve()
@@ -1045,6 +1301,12 @@ def main():
     # 4. Re-insert images according to placement rules
     headings = soup.find_all(["h2", "h3", "h4"])
 
+    # Tiền tố CDN cho ảnh chưa có URL: ảnh sẵn có của chính workspace, không có thì News/0/
+    # (xem SKILL.md mục "Dựng URL CDN trước khi upload"). Không dùng id của bài khác.
+    fallback_cdn_base = infer_base(workspace) or DEFAULT_BASE
+    if not fallback_cdn_base.endswith("/"):
+        fallback_cdn_base += "/"
+
     for idx, rule in enumerate(placement):
         fname = rule.get("file")
         heading_text_kw = rule.get("after_heading_contains", "").lower()
@@ -1056,7 +1318,7 @@ def main():
         if not img_src and idx < len(dump_imgs_list):
             img_src = dump_imgs_list[idx]
         if not img_src:
-            img_src = f"https://cdnv2.tgdd.vn/mwg-static/common/News/1581609/{fname}"
+            img_src = fallback_cdn_base + fname
 
         p_img, p_cap = format_image_element(soup, img_src, metadata, rule_fname=fname)
 
@@ -1123,17 +1385,23 @@ def main():
             {"keyword": "acer nitro", "url": "https://www.thegioididong.com/laptop-acer-nitro", "source": "CUSTOM"},
             {"keyword": "acer aspire", "url": "https://www.thegioididong.com/laptop-acer-aspire", "source": "CUSTOM"},
             {"keyword": "acer swift", "url": "https://www.thegioididong.com/laptop-acer-swift", "source": "CUSTOM"},
-            {"keyword": "lenovo legion", "url": "https://www.thegioididong.com/laptop-lenovo-legion", "source": "CUSTOM"},
+            # "lenovo legion" KHÔNG có trang dòng riêng: /laptop-lenovo-legion 302
+            # về /laptop (rà 29/09/2026). Bỏ hẳn override thay vì trỏ tạm sang
+            # /laptop-lenovo — anchor tên dòng mà đích là trang hãng là sai vật.
             {"keyword": "lenovo ideapad", "url": "https://www.thegioididong.com/laptop-lenovo-ideapad", "source": "CUSTOM"},
             {"keyword": "macbook air", "url": "https://www.thegioididong.com/laptop-apple-macbook-air", "source": "CUSTOM"},
             {"keyword": "macbook pro", "url": "https://www.thegioididong.com/laptop-apple-macbook-pro", "source": "CUSTOM"},
             {"keyword": "macbook", "url": "https://www.thegioididong.com/laptop-apple-macbook", "source": "CUSTOM"},
             {"keyword": "asus", "url": "https://www.thegioididong.com/laptop-asus", "source": "CUSTOM"},
             {"keyword": "dell", "url": "https://www.thegioididong.com/laptop-dell", "source": "CUSTOM"},
-            {"keyword": "hp", "url": "https://www.thegioididong.com/laptop-hp", "source": "CUSTOM"},
+            # Trang hãng HP là /laptop-hp-compaq. /laptop-hp 302 về /laptop —
+            # link cũ đẩy người đọc ra trang laptop tổng, mất đúng trang hãng.
+            {"keyword": "hp", "url": "https://www.thegioididong.com/laptop-hp-compaq", "source": "CUSTOM"},
             {"keyword": "msi", "url": "https://www.thegioididong.com/laptop-msi", "source": "CUSTOM"},
             {"keyword": "lenovo", "url": "https://www.thegioididong.com/laptop-lenovo", "source": "CUSTOM"},
             {"keyword": "acer", "url": "https://www.thegioididong.com/laptop-acer", "source": "CUSTOM"},
+            {"keyword": "singpc", "url": "https://www.thegioididong.com/laptop-singpc", "source": "CUSTOM"},
+            {"keyword": "thunderobot", "url": "https://www.thegioididong.com/laptop-thunderobot", "source": "CUSTOM"},
         ]
     elif "may-in" in ws_name or "printer" in ws_name or "hoa-don" in ws_name:
         CUSTOM_LINK_OVERRIDES = [
@@ -1153,8 +1421,9 @@ def main():
             {"keyword": "màn hình máy tính", "url": "https://www.thegioididong.com/man-hinh-may-tinh", "source": "CUSTOM"},
             {"keyword": "màn hình cong samsung", "url": "https://www.thegioididong.com/man-hinh-may-tinh-samsung", "source": "CUSTOM"},
             {"keyword": "màn hình samsung", "url": "https://www.thegioididong.com/man-hinh-may-tinh-samsung", "source": "CUSTOM"},
-            {"keyword": "màn hình cong lg", "url": "https://www.thegioididong.com/man-hinh-may-tinh-lg", "source": "CUSTOM"},
-            {"keyword": "màn hình lg", "url": "https://www.thegioididong.com/man-hinh-may-tinh-lg", "source": "CUSTOM"},
+            # LG và HP không có trang màn hình riêng: /man-hinh-may-tinh-lg và
+            # /man-hinh-may-tinh-hp đều 302 về /man-hinh-may-tinh (rà 29/09/2026).
+            # Bỏ override; anchor "màn hình LG" để trần còn hơn trỏ về trang tổng.
             {"keyword": "màn hình cong msi", "url": "https://www.thegioididong.com/man-hinh-may-tinh-msi", "source": "CUSTOM"},
             {"keyword": "màn hình msi", "url": "https://www.thegioididong.com/man-hinh-may-tinh-msi", "source": "CUSTOM"},
             {"keyword": "màn hình cong asus", "url": "https://www.thegioididong.com/man-hinh-may-tinh-asus", "source": "CUSTOM"},
@@ -1163,8 +1432,6 @@ def main():
             {"keyword": "màn hình dell", "url": "https://www.thegioididong.com/man-hinh-may-tinh-dell", "source": "CUSTOM"},
             {"keyword": "màn hình cong viewsonic", "url": "https://www.thegioididong.com/man-hinh-may-tinh-viewsonic", "source": "CUSTOM"},
             {"keyword": "màn hình viewsonic", "url": "https://www.thegioididong.com/man-hinh-may-tinh-viewsonic", "source": "CUSTOM"},
-            {"keyword": "màn hình cong hp", "url": "https://www.thegioididong.com/man-hinh-may-tinh-hp", "source": "CUSTOM"},
-            {"keyword": "màn hình hp", "url": "https://www.thegioididong.com/man-hinh-may-tinh-hp", "source": "CUSTOM"},
             {"keyword": "màn hình cong lenovo", "url": "https://www.thegioididong.com/man-hinh-may-tinh-lenovo", "source": "CUSTOM"},
             {"keyword": "màn hình lenovo", "url": "https://www.thegioididong.com/man-hinh-may-tinh-lenovo", "source": "CUSTOM"},
             {"keyword": "màn hình cong acer", "url": "https://www.thegioididong.com/man-hinh-may-tinh-acer", "source": "CUSTOM"},
@@ -1215,6 +1482,28 @@ def main():
         print(f"[INFO] no-link-anchor: {len(no_link_anchors)} anchor loai tru, "
               f"bo {before - len(internal_links)} link.")
 
+    # Lệch ngành chắc chắn sai: "Asus" trong bài máy bàn trỏ /laptop-asus,
+    # "loa" trỏ /loa-laptop. Ngành bài lấy từ URL bài, cùng map với gate B4.
+    cat_cfg = lc.load_map()
+    art_nganh, art_seg = lc.article_nganh(ws_name, self_url, cat_cfg)
+    print(f"[INFO] Nganh bai: {art_nganh}")
+    # Chỉ log keyword có mặt trong bài: Sheet có hàng nghìn keyword SKU không bao
+    # giờ khớp, log hết thì dòng cần đọc bị chìm.
+    article_text = soup.get_text(" ").lower()
+    kept = []
+    for item in internal_links:
+        why = lc.optimizer_skip_reason(item["keyword"], item["url"], art_nganh, art_seg,
+                                       cat_cfg, BARE_BRANDS)
+        if not why:
+            kept.append(item)
+        elif item["keyword"].strip().lower() in article_text:
+            print(f"skip-link: {item['keyword']} -> {lc.path_of(item['url'])} ({why})")
+    internal_links = kept
+
+    internal_links = resolve_link_redirects(internal_links, article_text, cat_cfg=cat_cfg,
+                                            art_nganh=art_nganh, art_seg=art_seg,
+                                            offline=args.offline)
+
     internal_links.sort(key=lambda x: len(x["keyword"]), reverse=True)
 
     inserted_report = []
@@ -1245,10 +1534,26 @@ def main():
     for warning in related_result["warnings"]:
         print(f"  [WARN] {warning}")
 
+    # 6.4 Mọi href nội bộ còn lại trong bài (box "Xem thêm", link PDP viết tay)
+    #     cũng phải là URL CUỐI. Link chèn tự động đã resolve ở trên; đây là lưới
+    #     cho link có sẵn trong source: redirect thì đổi URL, chết/lệch đích thì
+    #     tìm bài tương đương trong pool Sheet, không có thì gỡ link giữ chữ.
+    rewritten, href_logs = rewrite_redirected_hrefs(
+        soup, pool=internal_links, cat_cfg=cat_cfg, art_nganh=art_nganh,
+        art_seg=art_seg, offline=args.offline)
+    if rewritten:
+        print(f"[DONE] Sua {rewritten} href co san ve URL cuoi/URL thay the.")
+    for msg in href_logs:
+        print(f"  {msg}")
+
     # 6.5 Ensure all <a> tags have target="_blank" and rel="noopener noreferrer"
     for a in soup.find_all("a"):
         a["target"] = "_blank"
         a["rel"] = "noopener noreferrer"
+
+    # 6.6 Canh đều đoạn văn thân bài
+    justified = justify_body_paragraphs(soup)
+    print(f"[DONE] Canh đều {justified} đoạn văn (text-align: justify).")
 
     # 7. Save output
     final_html_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1256,6 +1561,12 @@ def main():
         f.write(str(soup))
 
     print(f"\n[DONE] Optimized HTML written to {final_html_path}")
+    # Dòng cuối cố ý là lời nhắc, không phải "xong". Script chèn link theo khớp
+    # chữ; khớp chữ không bảo đảm đúng vật, nên bài chỉ được coi là chốt sau khi
+    # Anti review từng link và Claude đọc lại bảng trước → sau (SKILL.md).
+    print("[CHUA CHOT] can Anti review link (bat buoc) — xem "
+          "content-html-optimizer/SKILL.md muc 'Vong review Anti'. "
+          "Chua co bang truoc -> sau cua Anti + Claude doc lai thi chua duoc air.")
 
 
 if __name__ == "__main__":

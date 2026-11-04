@@ -1,0 +1,12 @@
+{
+  "mdm": {
+    "_note": "Config mẫu cho onpage-mdm-khai-bao. Điền giá trị thật vào file mdm.config.json (đã gitignore) hoặc truyền MDM_CONFIG.",
+    "uiOrigin": "https://<origin-ui>",
+    "apiBase": "https://<origin-api>/mwg-app-masterdata-dynamic-service/api/v1/",
+    "pimApiBase": "https://<origin-api>/mwg-app-pim-service/api/v1/",
+    "pimCompanyId": "1",
+    "category": {"objectId": "<id>", "tableId": "<id>", "functionId": "<id>", "rootId": "<id>"},
+    "brand": {"objectId": "<id>", "tableId": "<id>", "functionId": "<id>"},
+    "filter": {"objectId": "<id>", "tableId": "<id>", "functionId": "<id>", "relationId": "<id>"}
+  }
+}

@@ -10,34 +10,28 @@ thu hẹp 6800+ dòng xuống một danh sách ngắn đáng đọc.
 
 Ví dụ:
     python3 suggest_related_articles.py \\
-        --workspace content-workspaces/hoidap-top-laptop-sinh-vien \\
+        --workspace mwg-content-editor/content-workspaces/hoidap-top-laptop-sinh-vien \\
         --terms "laptop sinh viên,laptop học tập,laptop dưới 20 triệu"
 """
 
 from __future__ import annotations
 
-import os
 import argparse
+import html
 import json
 import re
 import subprocess
 import sys
+import time
 import unicodedata
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-def _require(name, value, hint):
-    """Fail loudly instead of querying the wrong spreadsheet with an empty id."""
-    if not value:
-        raise SystemExit(
-            "%s is not set.\n"
-            "Export it to point this skill at your own sheet:\n"
-            "    export %s=<spreadsheet-id>\n"
-            "%s" % (name, name, hint))
-    return value
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import link_redirect as lr  # noqa: E402
 
-
-SHEET_BAI_TIN_ID = _require("SHEET_BAI_TIN_ID", os.environ.get("SHEET_BAI_TIN_ID", ""),
-    "Sheet holding article title -> URL rows.")
+SHEET_BAI_TIN_ID = os.environ.get("SHEET_BAI_TIN_ID", "")
 SHEET_RANGE = "BÀI TIN!A2:E"
 
 # Trọng số: khớp ở KW mục tiêu đáng tin hơn khớp ở Title, vì KW là chủ đích SEO
@@ -75,6 +69,29 @@ def fetch_bai_tin_rows() -> list[list[str]]:
     except json.JSONDecodeError as e:
         sys.exit(f"[ERR] Không parse được JSON từ gws: {e}")
     return data.get("values", [])
+
+
+def fetch_live_h1(url: str, retries: int = 2) -> str | None:
+    """Đọc H1 trên trang live. Trả None khi không đọc được.
+
+    Cột Title của sheet BÀI TIN không tự cập nhật khi bài đổi H1 (đo 28/09/2026:
+    12 anchor "Xem thêm" lệch trên 3 bài, vd 1382098 đổi sang "có sẵn Office bản quyền"
+    từ 24/09 mà sheet vẫn ghi "dưới 10 triệu"). Anchor = full tiêu đề nên phải lấy
+    tiêu đề thật từ trang.
+    """
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 Chrome/120"})
+    for _ in range(retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=40) as r:
+                page = r.read().decode("utf-8", errors="ignore")
+        except Exception:
+            time.sleep(2)
+            continue
+        m = re.search(r"<h1[^>]*>(.*?)</h1>", page, re.S)
+        if not m:
+            return None
+        return html.unescape(re.sub(r"<[^>]+>", "", m.group(1))).strip() or None
+    return None
 
 
 def strip_accents(text: str) -> str:
@@ -171,6 +188,17 @@ def main() -> None:
         default=[],
         help="ID bài tin cần loại (lặp lại được). Bài đang viết nên loại ở đây.",
     )
+    ap.add_argument(
+        "--no-live-title",
+        action="store_true",
+        help="Bỏ bước đọc H1 live, dùng Title của sheet (có thể đã cũ).",
+    )
+    ap.add_argument(
+        "--offline",
+        action="store_true",
+        help="Bỏ bước resolve redirect URL gợi ý (không có mạng). "
+             "Tương đương biến môi trường MWG_LINK_OFFLINE=1.",
+    )
     args = ap.parse_args()
 
     workspace = Path(args.workspace).resolve() if args.workspace else None
@@ -231,6 +259,38 @@ def main() -> None:
         print("Thử nới term (bỏ bớt chữ) hoặc kiểm lại chính tả.")
         return
 
+    # URL sheet còn nhiều slug cũ dạng `hoi-dap/bv-{id}` đang 301 sang slug thật.
+    # Đưa URL cuối vào box "Xem thêm" ngay từ lúc gợi ý, đừng để người dán URL
+    # redirect vào bài rồi optimizer phải sửa lại vòng sau.
+    if not lr.offline(args.offline):
+        resolved = lr.resolve_many([item["url"] for item in top])
+        for item in top:
+            res = resolved.get(item["url"])
+            if not res:
+                continue
+            verdict, why = lr.classify(res)
+            if verdict == "redirect":
+                print(f"[REDIRECT] {lr.path_of(item['url'])} -> {lr.path_of(res['final_url'])}")
+                item["url"] = res["final_url"]
+            elif verdict in ("dead", "offtopic"):
+                print(f"[WARN] BỎ gợi ý (link hỏng): {item['url']} — {why}")
+                item["drop"] = True
+        top = [item for item in top if not item.get("drop")]
+        if not top:
+            print("\n[KẾT QUẢ] Mọi gợi ý đều hỏng link. Nới term rồi chạy lại.")
+            return
+
+    if not args.no_live_title:
+        print(f"[INFO] Đọc H1 live của {len(top)} bài gợi ý...")
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            live_titles = list(pool.map(fetch_live_h1, [item["url"] for item in top]))
+        for item, live in zip(top, live_titles):
+            if live is None:
+                print(f"[WARN] Không đọc được H1 live, giữ Title sheet: {item['url']}")
+            elif live != item["title"]:
+                print(f"[TITLE] Sheet cũ: {item['title']}\n        H1 live : {live}")
+                item["title"] = live
+
     print(f"\n=== {len(top)} gợi ý (trên tổng {len(scored)} bài khớp) ===\n")
     for i, item in enumerate(top, 1):
         print(f"{i}. [{item['score']}đ] {item['title']}")
@@ -246,8 +306,8 @@ def main() -> None:
     # Anchor = TOÀN BỘ tiêu đề, không cắt lấy 1 cụm trong tiêu đề.
     for item in top:
         print(
-            f'<li><a title="{item["title"]}" href="{item["url"]}" '
-            f'target="_blank" rel="noopener">{item["title"]}</a></li>'
+            f'<li><a title="{html.escape(item["title"])}" href="{item["url"]}" '
+            f'target="_blank" rel="noopener">{html.escape(item["title"], quote=False)}</a></li>'
         )
     print("</ul>")
     print("<p>[/info]</p>")

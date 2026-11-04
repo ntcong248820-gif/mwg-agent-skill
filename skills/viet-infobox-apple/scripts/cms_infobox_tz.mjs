@@ -3,7 +3,7 @@
 // bài cũ đặt "<Tên> - Infobox TopZone" (1598413, 1598414, 1583112). Cú pháp user chốt 29/10/2026 (như bài TGDĐ "TGDĐ iPhone 18 series - Infobox"):
 // tiêu đề "TopZone <Tên> - Infobox", tag + meta "<Tên> - Infobox", url "<slug>-infobox-topzone" (đuôi -topzone tránh trùng url bài TGDĐ cùng site 1).
 // Dòng filter: actived (Xuất bản) + tick chuyên mục 2424. Hãng/Filter: pending (Chờ duyệt), KHÔNG tick chuyên mục (--khong-chuyen-muc). User tự gắn ID vào ô "Link TOPZONE" ở CMS cũ Category/Property.
-// HTTP thẳng bằng cookie CMS (cms-tz-http, profile ntvy-193118), không mở tab. Không in cookie.
+// HTTP thẳng bằng cookie CMS (biến CMS_COOKIE hoặc profile Chrome đã đăng nhập), không mở tab. Không in cookie.
 //
 //   node cms_infobox_tz.mjs tim "<cụm tiêu đề>"                       → [{id, tieu_de, trang_thai}] bài 2424 site 1 khớp
 //   node cms_infobox_tz.mjs doc <newsId> [-o file.html]                → thông tin bài + độ dài nội dung
@@ -11,8 +11,46 @@
 //        --tag "<Tên> - Infobox" --trang-thai actived|pending [--khong-chuyen-muc] [--thumb <url CDN>] [--id <newsId>] [--live]                    → id 0/không có: tạo mới; có id: cập nhật nội dung
 //   Không --live = dry: dựng payload, kiểm guard, không POST.
 import fs from 'node:fs';
-import { cmsFetch, chuanHoaNoiDung } from '/Users/nguyentuongvy/.claude/skills/cms-topzone-tao-bai/scripts/cms-tz-http.mjs';
-import { parseForm, decode } from '/Users/nguyentuongvy/.claude/skills/cms-faq-tao-bai/scripts/cms-http.mjs';
+
+export function decode(str) {
+  if (!str) return '';
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ');
+}
+
+export function parseForm(html) {
+  const fields = {};
+  const selects = {};
+  for (const m of html.matchAll(/<input\b[^>]*name="([^"]*)"[^>]*value="([^"]*)"/gi)) {
+    fields[m[1]] = decode(m[2]);
+  }
+  for (const m of html.matchAll(/<textarea\b[^>]*name="([^"]*)"[^>]*>([\s\S]*?)<\/textarea>/gi)) {
+    fields[m[1]] = decode(m[2]);
+  }
+  for (const m of html.matchAll(/<select\b[^>]*name="([^"]*)"[\s\S]*?<\/select>/gi)) {
+    const selected = m[0].match(/<option\b[^>]*selected[^>]*value="([^"]*)"/i);
+    if (selected) selects[m[1]] = decode(selected[1]);
+  }
+  return { fields, selects };
+}
+
+export function chuanHoaNoiDung(html) {
+  if (!html) return '';
+  return html.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+}
+
+export async function cmsFetch(url, options = {}) {
+  const headers = { ...(options.headers || {}) };
+  if (process.env.CMS_COOKIE) {
+    headers['Cookie'] = process.env.CMS_COOKIE;
+  }
+  return fetch(url, { ...options, headers });
+}
 
 const ROOT = 'https://cms.thegioididong.com/v2/';
 const SITE = 1;

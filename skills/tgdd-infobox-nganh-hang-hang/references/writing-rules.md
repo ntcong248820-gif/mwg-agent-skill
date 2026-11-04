@@ -95,6 +95,39 @@ Nên viết (câu hoàn chỉnh, có chủ ngữ, từ ngữ dễ hiểu):
 Cách kiểm nhanh trước khi giao bài: đọc to đoạn văn lên. Nếu phải ngắt giọng liên
 tục hoặc nghe như đang đọc danh sách, tách thành câu riêng và thêm chủ ngữ.
 
+## Đặt mình vào người đọc: thuật ngữ lạ phải được giải thích
+
+Trước khi giao mỗi đoạn, tự hỏi: **"Người mua bình thường đọc câu này có hiểu
+không, hay mình chỉ đang truyền tải thông tin và mặc định họ hiểu?"** Viết bài
+là để người đọc hiểu, không phải để liệt kê đủ thông số.
+
+Phân loại từng thuật ngữ kỹ thuật trong bài:
+
+| Loại | Ví dụ | Xử lý |
+|---|---|---|
+| Quá phổ biến, ai cũng biết | CPU, RAM, pin, Wi-Fi, Full HD, SSD | Dùng thẳng, không cần giải thích |
+| Nghe quen nhưng nhiều người không rõ nghĩa | tần số quét, OLED, độ phủ màu, DDR5, card rời, game AAA | Giải thích ngắn 1 lần ở lần xuất hiện đầu tiên |
+| Lạ, chỉ dân trong nghề mới biết | TGP, NPU, TOPS, WUXGA, xung nhịp, render, hậu kỳ, hàn chết, VRAM, PWM | Bắt buộc giải thích bằng lời thường (nghĩa + tác động với người dùng), hoặc thay bằng cách nói đời thường |
+
+Cách giải thích:
+
+- Viết liền trong câu, 1 mệnh đề ngắn: nó là gì và nó ảnh hưởng gì đến người
+  dùng. Ví dụ "TGP là mức điện năng tối đa hãng cho phép card sử dụng, càng cao
+  card càng phát huy được sức mạnh".
+- Con số theo một dãy đánh số (RTX 4060/5060/5070, Core i5/i7/i9, Ryzen 5/7/9)
+  cần một câu cho biết chiều hơn/kém: số nào lớn hơn thì mạnh hơn, trong cùng
+  thế hệ hay không.
+- Khi thuật ngữ chỉ xuất hiện để làm đẹp câu mà không giúp người đọc chọn mua,
+  bỏ hẳn hoặc thay bằng từ thường thay vì thêm chú thích.
+- Thuật ngữ nằm trong bảng thông số (mã CPU, độ phân giải như WUXGA/2.8K) thì
+  giải thích ở đoạn văn phía trước hoặc sau bảng, không nhồi vào ô bảng.
+- Mỗi thuật ngữ giải thích một lần, đúng theo mục "Không lặp lại giải thích
+  thuật ngữ". Lần nhắc lại dùng thẳng tên.
+- Tiếng lóng nghề nghiệp ("hàn chết", "nghẽn", "ăn xung") thay bằng cách nói
+  người mua hiểu ngay ("hàn liền vào bo mạch nên không nâng cấp được").
+- Trong trường hợp phân vân, đặt tiêu chuẩn theo người mua phổ thông chưa từng
+  đọc review công nghệ, không theo người viết.
+
 ## Không lạm dụng dấu hai chấm
 
 Rule này áp cho **văn xuôi trong đoạn văn**. Trong đoạn văn, phân cách ý bằng dấu

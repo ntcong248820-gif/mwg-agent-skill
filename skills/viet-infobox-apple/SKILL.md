@@ -52,7 +52,7 @@ Nội dung phục vụ bài SEO sản phẩm/danh mục trên website TGDD, nơi
 - Có thể dùng đại từ "bạn" để câu văn tự nhiên hơn, nhưng không lạm dụng.
 - Không dùng câu mở sáo rỗng, cảm tính hoặc quá quảng cáo.
 - Không dùng các cụm lộ nguồn như "Theo Apple", "Apple nhấn mạnh", "Trên trang sản phẩm hiện tại".
-- Hạn chế tối đa từ phóng đại tuyệt đối như "cốt lõi", "tiêu chí vàng", "nguyên tắc tối thượng", "cực kỳ", "vượt trội", "hoàn hảo" — chỉ dùng khi sản phẩm/tính năng thật sự xứng đáng (có số liệu/xác nhận cụ thể), không dùng mặc định. Danh sách đầy đủ và các dấu hiệu văn phong AI khác cần tránh (từ vựng dịch máy móc, câu kết đoạn tự thêm ý nghĩa, cấu trúc lặp công thức...): đọc `/Users/nguyentuongvy/.claude/skills/_shared/tranh-van-phong-ai.md` trước khi viết/rà bài.
+- Hạn chế tối đa từ phóng đại tuyệt đối như "cốt lõi", "tiêu chí vàng", "nguyên tắc tối thượng", "cực kỳ", "vượt trội", "hoàn hảo" — chỉ dùng khi sản phẩm/tính năng thật sự xứng đáng (có số liệu/xác nhận cụ thể), không dùng mặc định. Tránh các dấu hiệu văn phong AI (từ vựng dịch máy móc, câu kết đoạn tự thêm ý nghĩa, cấu trúc lặp công thức...).
 - Không dùng dấu gạch ngang dài. Nếu cần tách ý, dùng dấu `-`.
 - Không dùng dấu chấm phẩy ";" ở bất kỳ đâu trong bài — tách thành câu riêng hoặc dùng dấu phẩy/dấu chấm thay thế (chốt 13/09/2026).
 - Không viết hoa đầu tất cả các từ (Title Case) ở những cụm mô tả kiểu tính từ ghép giống tiếng Anh nhưng thực chất là tiếng Việt thường, ví dụ màu sắc: viết "Trắng ánh sao" chứ không phải "Trắng Ánh Sao" — chỉ viết hoa đầu câu/đầu cụm, các từ sau giữ nguyên chữ thường. Tên chương trình/dịch vụ riêng thật sự là brand name (ví dụ "Bảo Hành Vàng" của TGDĐ) thì vẫn giữ Title Case vì đây là proper noun thật, không thuộc diện lỗi này (chốt 13/09/2026).
@@ -197,7 +197,7 @@ Nếu cần bảng so sánh thường:
 Khi người dùng yêu cầu bảng HTML:
 
 - Với mọi phần liên quan đến bảng trong bài Apple, bắt buộc đọc `references/tgdd-html-formatter.md` và áp dụng chuẩn trong reference đó, gồm bảng so sánh, bảng giá, bảng thông số, bảng mốc thời gian/lịch sử và bảng tóm tắt nội dung.
-- Nếu chưa đọc trong lượt hiện tại, đọc đầy đủ `/Users/nguyentuongvy/.claude/skills/viet-infobox-apple/references/tgdd-html-formatter.md` trước khi tạo hoặc chỉnh bảng HTML.
+- Nếu chưa đọc trong lượt hiện tại, đọc đầy đủ `references/tgdd-html-formatter.md` trước khi tạo hoặc chỉnh bảng HTML.
 - Bảng phải được bọc bằng thẻ `<div>` chống tràn mobile theo chuẩn `tgdd-html-formatter`: `width: 100%; max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 16px 0; box-sizing: border-box;`.
 - Thẻ `<table>` cần có inline style tương thích TinyMCE và mobile: `width: 100%; min-width: 620px; max-width: 100%; border-collapse: collapse; table-layout: fixed; margin: 0; font-size: 14px; line-height: 1.5; color: #333333;`.
 - Dòng tiêu đề bảng dùng nền đen `#000000`, chữ vàng `#FFE14C`, căn giữa và in đậm theo chuẩn TGDD.

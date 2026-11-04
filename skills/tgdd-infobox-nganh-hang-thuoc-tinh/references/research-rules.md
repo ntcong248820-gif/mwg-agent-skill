@@ -77,12 +77,15 @@ Riêng CTA vẫn cần đọc ưu đãi và chính sách đang được nhắc �
 ## Đa dạng hóa từ khóa - tránh nhồi nhét (bắt buộc)
 
 Trước khi viết, tra Sheet "All KW"
-(`https://docs.google.com/spreadsheets/d/${SHEET_ALL_KW_ID}/edit?gid=1362785491#gid=1362785491`):
+(`https://docs.google.com/spreadsheets/d//edit?gid=1362785491#gid=1362785491`):
 lọc các dòng có cột O (URL TGDD) khớp đúng URL danh mục đang viết, lấy danh
 sách từ khóa ở cột L (Keyword) kèm Volume Search ở cột M.
 
 - Ưu tiên dùng từ khóa có volume cao nhất làm từ khóa chính, xuất hiện nhiều
-  nhất trong bài (sapo H2, heading H3 đầu, các đoạn quan trọng nhất).
+  nhất trong bài (sapo H2, heading H3 đầu, các đoạn quan trọng nhất). Ở lần
+  xuất hiện đầu tiên trong sapo H2, bọc từ khóa chính này thành self-link trỏ
+  về chính URL danh mục đang viết — xem `references/formatting-rules.md` mục
+  "Self-link ở sapo".
 - Các từ khóa còn lại trong danh sách nên được rải tự nhiên vào các đoạn thân
   bài và heading phụ, thay cho việc lặp đi lặp lại đúng một cụm từ khóa xuyên
   suốt bài. Lặp một cụm khiến bài đọc "sượng", giống nhồi nhét từ khóa

@@ -40,6 +40,7 @@
 - [ ] Mỗi ý là một câu hoàn chỉnh có chủ ngữ; không có đoạn dồn nhiều ý bằng dấu phẩy theo kiểu gạch đầu dòng viết liền.
 - [ ] Trong mỗi đoạn văn xuôi có tối đa một dấu `:`; không dùng `:` thay động từ (viết "máy có màn hình 14 inch", không viết "màn hình: 14 inch"). Nhãn bullet `- **Tên:** ...` và câu dẫn vào list/bảng KHÔNG tính.
 - [ ] Không còn từ khó hiểu kiểu "hậu tố H/U" (viết "chip H", "chip U"), "tiết giảm", "định vị", "đánh đổi" — đã thay bằng từ người mua dùng hằng ngày.
+- [ ] Đã đọc lại bài bằng con mắt người mua phổ thông: mọi thuật ngữ lạ (TGP, NPU, WUXGA, xung nhịp, render...) đã được giải thích 1 lần bằng lời thường hoặc đã thay bằng cách nói đời thường; dãy số đánh cấp (RTX, Core i, Ryzen) có câu cho biết số nào mạnh hơn; thuật ngữ quá phổ biến (CPU, RAM, SSD...) không bị giải thích thừa.
 
 ## CTA
 
@@ -76,3 +77,9 @@
 - [ ] Ngoài cột tên sản phẩm, không ô nào khác trong bảng có link.
 - [ ] Giá trong bảng đã đối chiếu với giá hiển thị trên trang danh mục trong cùng lượt
       lấy URL; giá lệch thì đã sửa kèm cập nhật mốc ngày.
+
+## Self-link ở sapo
+
+- [ ] Sapo H2 có đúng 1 self-link về chính URL danh mục đang viết.
+- [ ] Anchor là từ khóa chính (volume cao nhất theo Sheet All KW cho URL này).
+- [ ] Không lặp lại self-link này ở heading hay đoạn văn khác trong bài.

@@ -11,7 +11,7 @@ Bắt đúng các lỗi đã gặp thật khi làm bài Top 10 laptop gaming:
   - source-content.html và final-content.html lệch nhau
 
 Usage:
-  python3 validate_article.py --workspace path/to/content-workspace/{slug}
+  python3 validate_article.py --workspace mwg-content-editor/content-workspaces/{slug}
   python3 validate_article.py --file path/to/final-content.html
   python3 validate_article.py --workspace DIR --check-cdn   # HEAD request từng ảnh
 """
@@ -20,7 +20,9 @@ import os
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 
 try:
     from bs4 import BeautifulSoup
@@ -135,8 +137,11 @@ def check_shortcodes(html, rep):
         else:
             rep.ok("promo-bottom-position")
         overlap = sorted(set(bot_ids) & set(prod_ids))
-        if not bot_ids:
-            rep.fail("promo-bottom-listid", "listid cuoi bai rong")
+        if not bot_ids and bot_attrs.get("categoryid") and bot_attrs.get("sort"):
+            rep.ok("promo-bottom-listid",
+                   f'listing theo nganh hang categoryid={bot_attrs["categoryid"]} sort={bot_attrs["sort"]}')
+        elif not bot_ids:
+            rep.fail("promo-bottom-listid", "listid cuoi bai rong va khong co categoryid + sort")
         elif overlap:
             rep.fail("promo-bottom-listid",
                      f"listid cuoi bai phai la SP GIAM SOC KHAC, khong trung SP trong bai. Trung: {','.join(overlap)}")
@@ -255,6 +260,292 @@ def check_images(soup, html, prod_ids, rep):
         rep.ok("image-position", "anh nam sau [info] + doan van mo dau o moi SP")
 
 
+EXPLAINER_SEGS = ("hoi-dap", "tin-tuc", "kinh-nghiem-hay", "game-app")
+SELF_BRAND_RE = re.compile(r"^\s*(th[eê]['´̂]?\s*gi[oơ]['´̛]?i\s*di\s*[dđ][oô][.̣]?ng|tgd[dđ])\s*$", re.I)
+
+
+def url_path(href):
+    return re.sub(r"^https?://[^/]+", "", (href or "").split("?")[0].split("#")[0]).strip("/")
+
+
+def is_pdp_href(href):
+    """PDP = trang sản phẩm: path đúng 2 segment, segment đầu là ngành hàng."""
+    segs = [s for s in url_path(href).split("/") if s]
+    return len(segs) == 2 and segs[0] not in EXPLAINER_SEGS
+
+
+def check_product_sections(soup, rep):
+    """Mỗi khối SP phải tự dẫn về PDP của chính nó, và nhãn thông số phải in đậm."""
+    no_pdp, partial_anchor, weak_label = [], [], []
+    for h4, grp in product_blocks(soup):
+        name = h4.get_text(strip=True)
+        pdp = None
+        for node in grp:
+            for a in (node.find_all("a", href=True) if node.name else []):
+                if is_pdp_href(a.get("href")):
+                    pdp = a
+                    break
+            if pdp:
+                break
+        if pdp is None:
+            no_pdp.append(name[:45])
+        else:
+            # anchor phải bọc TOÀN BỘ tên SP, không bọc một phần
+            # Anchor được phép bỏ mã SP/cấu hình ở đuôi, nhưng phải bọc phần lớn
+            # tên máy. Dưới 60% số từ là kiểu "MSI Modern" trong "MSI Modern 14 F1MG".
+            core = re.sub(r"\s*[\(\-–].*$", "", name).strip().lower().split()
+            anchor = pdp.get_text(strip=True)
+            kept = sum(1 for w in core if w in anchor.lower())
+            if core and kept / len(core) < 0.6:
+                partial_anchor.append(f"{name[:35]}: anchor {anchor[:40]!r}")
+
+        for node in grp:
+            if not node.name:
+                continue
+            for li in node.find_all("li"):
+                txt = li.get_text(" ", strip=True)
+                if ":" not in txt:
+                    continue
+                label = txt.split(":", 1)[0].strip()
+                bold = " ".join(b.get_text(" ", strip=True).rstrip(":").strip()
+                                for b in li.find_all(["strong", "b"]))
+                if label and label not in bold:
+                    weak_label.append(f"{name[:30]} / {label[:24]}")
+
+    if no_pdp:
+        rep.fail("product-pdp-link",
+                 "khoi SP thieu link PDP cua chinh no (phai boc TEN SP o cau dau): "
+                 + "; ".join(no_pdp))
+    else:
+        rep.ok("product-pdp-link", "moi khoi SP co link PDP cua chinh no")
+
+    if partial_anchor:
+        rep.warn("product-pdp-anchor", "anchor PDP khong boc du ten SP: " + "; ".join(partial_anchor[:6]))
+    else:
+        rep.ok("product-pdp-anchor", "anchor PDP boc du ten SP")
+
+    if weak_label:
+        rep.fail("spec-label-bold",
+                 "nhan thong so trong [info] phai in dam (<strong>CPU:</strong> ...): "
+                 + "; ".join(weak_label[:8]))
+    else:
+        rep.ok("spec-label-bold", "nhan thong so da in dam")
+
+
+def check_justify(soup, rep):
+    """Đoạn văn thân bài phải canh đều; optimize_content.py tự gán, thiếu = chưa optimize."""
+    missing = 0
+    for p in soup.find_all("p"):
+        if p.find_parent(["table", "li"]) or p.find("img"):
+            continue
+        txt = p.get_text(strip=True)
+        if not txt or txt.startswith("["):
+            continue
+        if "text-align" not in (p.get("style") or ""):
+            missing += 1
+    if missing:
+        rep.warn("body-justify",
+                 f'{missing} doan van chua co style="text-align: justify;" '
+                 f"- chay lai optimize_content.py")
+    else:
+        rep.ok("body-justify", "doan van than bai da canh deu")
+
+
+def check_table_cell_linebreak(soup, rep):
+    """Ô bảng ngắt dòng bằng <br/> hoặc chữ "- " dính một <p> → live hiện một dòng.
+
+    Site TGDĐ bỏ <br/> trong <td> lúc render (CMS vẫn lưu), nên chỉ <p> riêng từng dòng mới sống.
+    """
+    br_cells = flat_cells = 0
+    for td in soup.find_all(["td", "th"]):
+        if td.find("br"):
+            br_cells += 1
+        elif not td.find("p") and not td.find("li") and re.search(r"\n\s*[-•]\s+\S", td.get_text()):
+            flat_cells += 1
+    if br_cells or flat_cells:
+        rep.fail("table-cell-linebreak",
+                 f"{br_cells} o dung <br/> (site live bo <br/>), {flat_cells} o gach dau dong khong co <p> "
+                 f"rieng -> gach dau dong dinh thanh 1 dong. Moi dong phai la <p> rieng")
+    else:
+        rep.ok("table-cell-linebreak", "o bang ngat dong bang <p>")
+
+
+def check_table_header(soup, rep):
+    bad = sum(1 for th in soup.find_all("th") if "font-size" not in (th.get("style") or ""))
+    if bad:
+        rep.warn("table-header-font",
+                 f"{bad} <th> chua set font-size (ke thua 14px cua table -> chu header nho "
+                 f"bang chu o) - chay lai optimize_content.py")
+    else:
+        rep.ok("table-header-font", "<th> co font-size rieng")
+
+
+# Danh từ đầu cụm đứng trước tên hãng/công nghệ. Bản rút gọn của
+# `content-html-optimizer/scripts/link_anchor.py` — validator phải chạy được độc
+# lập với skill kia (khác package), nên chép chứ không import.
+HEAD_NOUNS = (
+    "màn hình máy tính", "máy tính để bàn", "máy tính bảng", "card màn hình",
+    "card đồ họa", "card đồ hoạ", "màn hình", "máy tính", "máy in", "laptop",
+    "thương hiệu", "tấm nền", "ổ cứng", "bàn phím", "cảm biến", "chuột",
+    "hãng", "card", "chip", "cpu", "gpu", "ram", "pin",
+)
+_HEAD_NOUNS_BY_LEN = tuple(sorted(HEAD_NOUNS, key=len, reverse=True))
+SINGLE_LATIN_TOKEN = re.compile(r"[A-Za-z][A-Za-z0-9+\-]*$")
+
+
+def text_before(tag):
+    """Chữ đứng ngay trước tag, trong cùng một text node (giữ khoảng trắng cuối)."""
+    prev = tag.previous_sibling
+    if prev is None or getattr(prev, "name", None) is not None:
+        return ""
+    return str(prev)[-80:]
+
+
+def partial_phrase_anchor(anchor, before):
+    """Trả cụm đầy đủ ("laptop HP") khi anchor cắt nửa cụm, None nếu anchor ổn."""
+    anchor = (anchor or "").strip()
+    if not anchor or " " in anchor or anchor.lower() in {n.lower() for n in HEAD_NOUNS}:
+        return None
+    if not SINGLE_LATIN_TOKEN.fullmatch(anchor):
+        return None
+    if not re.search(r"[ \t ]$", before or ""):
+        return None
+    stem = before[:-1]
+    low = stem.lower()
+    for noun in _HEAD_NOUNS_BY_LEN:
+        if not low.endswith(noun):
+            continue
+        start = len(stem) - len(noun)
+        if start > 0 and re.match(r"[\w]", stem[start - 1], re.UNICODE):
+            continue
+        return f"{stem[start:].strip()} {anchor}"
+    return None
+
+
+def check_anchor_phrase(soup, rep):
+    """Anchor phải trọn nghĩa: "laptop HP", không phải "laptop [HP]".
+
+    Reviewer MWG 29/09/2026 bắt mẫu này ở bài đã air. `optimize_content.py` tự
+    nới khi chèn, nên còn sót thường là anchor viết tay trong source.
+    """
+    bad = []
+    for a in soup.find_all("a", href=True):
+        full = partial_phrase_anchor(a.get_text(strip=True), text_before(a))
+        if full:
+            bad.append(f"'{a.get_text(strip=True)}' -> phai boc ca '{full}'")
+    if bad:
+        rep.warn("link-anchor-phrase",
+                 "anchor cat nua cum (link mot chu le giua cau): " + "; ".join(bad[:6])
+                 + "\n         Sua o source-content.html roi chay lai optimize_content.py.")
+    else:
+        rep.ok("link-anchor-phrase", "anchor khong cat nua cum")
+
+
+def check_link_http(soup, rep, offline=False):
+    """Mọi href nội bộ phải trả 200 và KHÔNG redirect.
+
+    Chết (404/410/5xx) và còn redirect đều = **FAIL** (owner chốt 29/09/2026).
+    Trước đó redirect chỉ là WARN vì "cách sửa là chạy lại optimizer" — nhưng
+    WARN không chặn air, nên bài vẫn ra ngoài với href đẩy người đọc thêm một
+    chặng, có ca rơi hẳn về trang rộng hơn. Cách sửa không đổi (chạy lại
+    `optimize_content.py`, nó tự đổi sang URL cuối / tìm URL thay thế); chỉ có
+    mức nghiêm trọng đổi.
+
+    Không đo được (mất mạng, bị chặn) thì WARN — không kết luận link hỏng.
+    `--offline` / `MWG_LINK_OFFLINE=1` bỏ qua phần HTTP và nói rõ là **chưa kiểm**.
+    """
+    if offline or os.environ.get("MWG_LINK_OFFLINE", "").strip() not in ("", "0"):
+        rep.warn("link-http", "bo qua kiem HTTP/redirect (offline)")
+        return
+    hrefs = []
+    for a in soup.find_all("a", href=True):
+        h = a["href"].strip()
+        if any(d in h for d in ("thegioididong.com", "dienmayxanh.com", "topzone.vn")):
+            hrefs.append(h)
+    if not hrefs:
+        rep.ok("link-http", "khong co href noi bo")
+        return
+
+    dead, redirected, unknown = [], [], 0
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        for href, (status, final_url, err) in zip(hrefs, pool.map(head_final, hrefs)):
+            if err or status is None:
+                unknown += 1
+            elif status in (404, 410) or status >= 500:
+                dead.append(f"{url_path(href)} (HTTP {status})")
+            elif url_path(final_url) != url_path(href):
+                redirected.append(f"{url_path(href)} -> {url_path(final_url)}")
+
+    if dead or redirected:
+        msg = []
+        if dead:
+            msg.append("link chet: " + "; ".join(sorted(set(dead))[:6]))
+        if redirected:
+            msg.append("href con redirect, phai dung URL cuoi: "
+                       + "; ".join(sorted(set(redirected))[:6]))
+        rep.fail("link-http", "; ".join(msg)
+                 + "\n         Chay lai optimize_content.py: no doi sang URL cuoi, "
+                   "tim URL thay the cho link chet/lech dich, khong co thi go link giu chu.")
+    elif unknown:
+        rep.warn("link-http", f"{unknown} href khong do duoc (mang/chan bot), kiem lai tay")
+    else:
+        rep.ok("link-http", f"{len(set(hrefs))} href tra 200, khong redirect")
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+def _one_hop(url, method, timeout):
+    """Trả (status, location, loi) cho ĐÚNG một request, không đi theo redirect."""
+    try:
+        req = urllib.request.Request(url, method=method, headers={"User-Agent": UA})
+        with _OPENER.open(req, timeout=timeout) as r:
+            return getattr(r, "status", r.getcode()), None, None
+    except urllib.error.HTTPError as e:
+        return e.code, (e.headers.get("Location") if e.headers else None), None
+    except Exception as e:
+        return None, None, f"{type(e).__name__}: {e}"
+
+
+def head_final(url, timeout=12, max_hops=5):
+    """Trả (status_cuoi, url_cuoi, loi). Tu di theo redirect de biet CO redirect."""
+    current, status, err = url, None, None
+    for _ in range(max_hops):
+        status, loc, err = _one_hop(current, "HEAD", timeout)
+        if status in (403, 405, 501):  # vai origin chan HEAD nhung cho GET
+            status, loc, err = _one_hop(current, "GET", timeout)
+        if err or not (status and 300 <= status < 400 and loc):
+            break
+        current = urllib.parse.urljoin(current, loc)
+    return status, current, err
+
+
+def check_link_context(soup, rep):
+    """Cảnh báo mẫu link chắc chắn nghi sai ngữ cảnh. KHÔNG tự xóa — người review."""
+    in_spec, self_brand = [], []
+    for a in soup.find_all("a", href=True):
+        anchor = a.get_text(strip=True)
+        if a.find_parent("li") and not is_pdp_href(a["href"]) and len(anchor.split()) <= 4:
+            in_spec.append(anchor[:30])
+        if not url_path(a["href"]) or SELF_BRAND_RE.match(anchor):
+            self_brand.append(anchor[:30] or a["href"][:40])
+    msgs = []
+    if in_spec:
+        msgs.append("anchor trong <li> (dong thong so khong phai cho di link): " + "; ".join(in_spec[:5]))
+    if self_brand:
+        msgs.append("link tu xung TGDD / trang chu: " + "; ".join(self_brand[:5]))
+    if msgs:
+        rep.warn("link-context", " | ".join(msgs)
+                 + "\n         Doc lai tung link bang check_internal_links.py truoc khi air.")
+    else:
+        rep.ok("link-context", "khong thay mau link nghi sai ngu canh")
+
+
 def check_formatting(soup, rep):
     bad_h2 = [h.get_text(strip=True)[:40] for h in soup.find_all("h2") if h.find(["strong", "b"])]
     if bad_h2:
@@ -333,9 +624,12 @@ def check_parity(ws, rep):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     g = ap.add_mutually_exclusive_group(required=True)
-    g.add_argument("--workspace", help="content-workspace/{slug} (validate final-content.html)")
+    g.add_argument("--workspace", help="content-workspaces/{slug} (validate final-content.html)")
     g.add_argument("--file", help="File HTML cu the")
     ap.add_argument("--check-cdn", action="store_true", help="HEAD request tung anh -> bao anh chua upload CMS")
+    ap.add_argument("--offline", action="store_true",
+                    help="Bo kiem HTTP/redirect cua href (khong co mang). "
+                         "Tuong duong bien moi truong MWG_LINK_OFFLINE=1.")
     a = ap.parse_args()
 
     ws = a.workspace
@@ -351,7 +645,14 @@ def main():
     prod_ids = check_shortcodes(html, rep)
     if prod_ids:
         check_images(soup, html, prod_ids, rep)
+        check_product_sections(soup, rep)
     check_formatting(soup, rep)
+    check_justify(soup, rep)
+    check_table_header(soup, rep)
+    check_table_cell_linebreak(soup, rep)
+    check_link_context(soup, rep)
+    check_anchor_phrase(soup, rep)
+    check_link_http(soup, rep, offline=a.offline)
     if ws:
         check_parity(ws, rep)
     if a.check_cdn:

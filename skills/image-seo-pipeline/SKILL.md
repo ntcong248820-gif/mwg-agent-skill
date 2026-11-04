@@ -9,14 +9,16 @@ description: >
   nén ảnh infobox, sinh metadata ảnh, chạy pipeline hình, xử lý hình.
 user-invocable: true
 when_to_use: >
-  Trigger khi user muốn xử lý/tối ưu hình ảnh cho một content workspace.
-  Áp dụng cho bất kỳ thư mục bài viết nào có images-original/ cần chuẩn hóa SEO.
+  Trigger khi user muốn xử lý/tối ưu hình ảnh cho một content workspace
+  mwg-content-editor. Áp dụng cho các topic infobox laptop, màn hình, hoặc
+  bất kỳ bài viết TGDĐ nào có images-original/ cần chuẩn hóa SEO.
   KHÔNG dùng cho resize đơn lẻ hay chỉnh sửa ảnh sản phẩm trực tiếp lên CMS.
 category: content-ops
 keywords: [image-seo, alt-text, exif, metadata, infobox, kebab, ImageMagick, Gemini]
 metadata:
-  author: mwg-agent-skill
+  author: mwg-ai-worker
   version: "2.0.0"
+  workspace: mwg-ai-worker
 ---
 
 # image-seo-pipeline
@@ -25,8 +27,7 @@ Pipeline tối ưu hình ảnh chuẩn SEO cho bài viết/infobox TGDĐ.
 
 ## Scope
 
-Skill này chỉ xử lý ảnh trong một content workspace `{workspace_path}/` có sẵn
-thư mục `images-original/`.
+Skill này chỉ xử lý ảnh trong `mwg-content-editor/content-workspaces/{topic-slug}/`.
 Không xử lý ảnh sản phẩm CMS, không upload ảnh lên CDN, không sửa HTML source.
 
 ## Dependencies
@@ -47,12 +48,12 @@ SCRIPT    = .agents/skills/image-seo-pipeline/scripts/process_images.py
 
 ## Workflow
 
-1. Xác định `workspace_path` — thư mục chứa `images-original/` của bài.
+1. Xác định `workspace_path = mwg-content-editor/content-workspaces/{topic-slug}/`.
 2. Kiểm tra `images-original/` tồn tại và không rỗng.
 3. Chạy script từ root workspace:
    ```bash
-   python3 skills/image-seo-pipeline/scripts/process_images.py \
-     --workspace {workspace_path}
+   python3 .agents/skills/image-seo-pipeline/scripts/process_images.py \
+     --workspace mwg-content-editor/content-workspaces/{topic-slug}
    ```
 4. Script tự động:
    - Đọc `metadata/image-metadata.csv` để skip ảnh đã `status=done`.
@@ -89,4 +90,17 @@ metadata/
 
 Skill chỉ đọc/ghi trong content-workspace được chỉ định.
 Không đọc `.env`, không truy cập CDN, không tự động upload.
-Không nhận API key qua argument — dùng `GEMINI_API_KEY` env hoặc ADC.
+Không nhận API key qua argument — đọc từ env: `GEMINI_API_KEYS` (nhiều key, phân cách dấu phẩy), rồi `GEMINI_API_KEY`, rồi `GOOGLE_API_KEY`.
+
+### Xoay key khi hết quota
+
+`scripts/gemini_key_pool.py` giữ danh sách cặp (key, model) còn sống. Quota free tính theo
+(project, model), và key tạo sau bị chặn `gemini-2.5-flash` / `2.5-flash-lite` ("no longer
+available to new users"), nên pool loại theo **cặp**, không loại cả key:
+
+- Hết quota ngày (`...PerDay...`) hoặc 404 model → bỏ cặp đó, sang cặp kế.
+- 429 theo phút → nhảy cặp kế ngay; chỉ ngủ 35s khi cả vòng đều nghẽn.
+- Key sai (`API key not valid`) → bỏ cả key.
+- Chỉ khi **mọi** cặp đều chết mới rơi vào fallback `status=watch` (alt rác, phải chạy lại).
+
+Log in `…xxxx` (4 ký tự cuối), không in key. Thêm key: sửa `GEMINI_API_KEYS` trong `~/.zshrc`.

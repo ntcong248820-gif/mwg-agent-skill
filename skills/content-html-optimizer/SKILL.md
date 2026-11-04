@@ -28,6 +28,7 @@ keywords: [html, infobox, table, heading, h2, h3, strong, alt, caption, image-pl
 metadata:
   author: mwg-ai-worker
   version: "3.3.0"
+  workspace: mwg-ai-worker
 ---
 
 # content-html-optimizer
@@ -36,7 +37,7 @@ Pipeline tối ưu HTML source content chuẩn MWG/TGDĐ (layout ảnh, chuẩn 
 
 ## Scope
 
-Chỉ xử lý file trong `content-workspaces/{topic-slug}/source/`.
+Chỉ xử lý file trong `mwg-content-editor/content-workspaces/{topic-slug}/source/`.
 Không upload CMS, không xử lý file ảnh vật lý (dùng `image-seo-pipeline`).
 
 ## Dữ liệu cấp workspace (KHÔNG nhét vào script)
@@ -118,11 +119,11 @@ Thứ tự lấy tiền tố:
 ```bash
 # TRƯỚC khi upload — mọi URL phải 404
 python3 .claude/skills/content-html-optimizer/scripts/verify_cdn_urls.py \
-  --workspace content-workspaces/{topic-slug} --expect free
+  --workspace mwg-content-editor/content-workspaces/{topic-slug} --expect free
 
 # SAU khi upload — mọi URL phải 200, kèm ghi cdn-urls.json
 python3 .claude/skills/content-html-optimizer/scripts/verify_cdn_urls.py \
-  --workspace content-workspaces/{topic-slug} --expect live --write-json
+  --workspace mwg-content-editor/content-workspaces/{topic-slug} --expect live --write-json
 ```
 
 Script tự suy tiền tố từ source của workspace; ép tay bằng `--base`.
@@ -162,6 +163,18 @@ sửa một chỗ, cả bộ theo.
 2. **Quy Tắc Match & Chống Cắt Chữ:**
    - **1 URL / 1 link:** Mỗi URL đích chỉ xuất hiện tối đa 1 lần duy nhất trong bài.
    - **Chống cắt lẻ thương hiệu:** Không cắt lẻ từ thương hiệu/tên ngắn (ví dụ "HP") nếu từ ngay sau nó là tên dòng/model (ví dụ "HP Victus", "HP Omen", "HP Pavilion").
+   - **Anchor phải trọn nghĩa của cụm:** tên hãng/tên công nghệ MỘT chữ mà ngay
+     trước là danh từ đầu cụm (`laptop`, `máy tính`, `màn hình`, `máy in`, `hãng`,
+     `thương hiệu`, `card`, `chip`...) thì anchor bọc **cả danh từ đó**:
+     `<a>laptop HP</a>`, `<a>màn hình OLED</a>` — không để `laptop <a>HP</a>`.
+     Giữ nguyên hoa/thường của bài. Danh từ đó đã nằm trong link khác
+     (`<a>laptop</a> HP`) thì **bỏ khớp**. Anchor nhiều chữ đã trọn nghĩa
+     (`dòng <a>Acer Aspire</a>`) — không đụng. Rule ở `scripts/link_anchor.py`.
+   - **URL đích phải là URL CUỐI (sau redirect):** `/hoi-dap/bv-{id}` và category
+     đã gộp (`/laptop-hp` → `/laptop`) đều đang 301/302. Script tự resolve
+     (`scripts/link_redirect.py`) trước khi chèn và sửa luôn href có sẵn; đích
+     404 hoặc redirect về trang chủ/trang rộng hơn thì **bỏ link** kèm WARN.
+     Không có mạng: `--offline` hoặc `MWG_LINK_OFFLINE=1`.
    - **Chuẩn hóa Anchor Text:** Xóa bỏ khoảng trắng thừa đầu/cuối bên trong thẻ `<a>` (ví dụ `<a>sạc</a>` thay vì `<a> sạc </a>`).
    - Tất cả thẻ link chèn đều có `target="_blank" rel="noopener noreferrer"`.
 3. **Phủ Rộng Tối Đa:**
@@ -465,7 +478,7 @@ này sang bài kia là sai.
 
 ```bash
 python3 .agents/skills/content-html-optimizer/scripts/optimize_content.py \
-  --workspace content-workspaces/{topic-slug} \
+  --workspace mwg-content-editor/content-workspaces/{topic-slug} \
   --fetch-links
 ```
 
@@ -477,7 +490,7 @@ cảnh**. Vì vậy sau khi build xong, bắt buộc chạy:
 
 ```bash
 python3 .agents/skills/content-html-optimizer/scripts/check_internal_links.py \
-  --workspace content-workspaces/{topic-slug} \
+  --workspace mwg-content-editor/content-workspaces/{topic-slug} \
   --json {task}/data/processed/linkqc-{topic-slug}.json
 ```
 
@@ -491,6 +504,17 @@ chỉ trong câu đó** — không phải thứ chứa nó (dòng/hãng/ngành h
 | B4 | Đích lệch ngành hàng bài, hoặc bộ phận có sẵn → category phụ kiện rời |
 | C1 | Link trong khối `[info]` thông số trỏ về trang mua hàng |
 | D1/D2/D3 | Tự link về chính bài / trùng URL / trùng đích với box "Xem thêm" |
+| F1 | Anchor cắt nửa cụm: `laptop [HP]`, `màn hình [OLED]` (WARN) |
+| F2/F3 | Href chết (404/5xx), hoặc còn redirect / redirect lệch chủ đề (FAIL) |
+
+`validate_article.py` check `link-http` cũng **FAIL** khi còn href redirect hoặc
+chết — từ 29/09/2026, trước đó redirect chỉ WARN nên bài vẫn air được với href
+đẩy người đọc thêm một chặng.
+
+F1 và F3 **không bị `--fix` gỡ**: cách sửa là nới anchor / đổi href, tức chạy lại
+`optimize_content.py`, chứ gỡ link là mất luôn cái đang đúng. F2/F3 cần mạng —
+`--offline` (hoặc `MWG_LINK_OFFLINE=1`) tắt phần đó, và output **nói rõ là chưa
+kiểm** thay vì im lặng trả OK.
 
 Bảng phân loại đầy đủ 20 trường hợp (kể cả các ca **ĐÚNG** không được gỡ nhầm,
 như `[tần số quét]144Hz` → bài "tần số quét là gì"):
@@ -501,7 +525,7 @@ link rồi mới quyết. Duyệt xong thì gỡ bằng:
 
 ```bash
 python3 .agents/skills/content-html-optimizer/scripts/check_internal_links.py \
-  --workspace content-workspaces/{topic-slug} --fix
+  --workspace mwg-content-editor/content-workspaces/{topic-slug} --fix
 ```
 
 `--fix` gỡ thẻ `<a>` nhưng **giữ nguyên chữ**, và backup `final-content.html.prelinkfix`.
@@ -510,7 +534,27 @@ optimize** — không phải sửa một lần là xong.
 
 Đích lệch ngành nhưng là lời mời mua thật (không bao giờ là bộ phận có sẵn của
 máy) khai trong `phu_kien_hop_le` của `references/link-category-map.json`, không
-gắn cờ. Hiện có: `tui-chong-soc-balo-laptop`, `phan-mem-*` cho bài laptop.
+gắn cờ. Hiện có: `tui-chong-soc-balo-laptop`, `phan-mem-*` cho bài laptop;
+`phan-mem`, `man-hinh-may-tinh`, `may-in`, `tai-nghe` cho bài máy tính để bàn.
+Key có thể là segment URL bài cụ thể và thắng key ngành: `may-tinh-de-ban-aio`
+chỉ có `phan-mem`, vì máy AIO có sẵn màn hình và loa.
+
+**Ngành của bài lấy từ `source/article-url.txt`** (URL danh mục thật), thiếu file
+thì mới theo `nganh_theo_slug`. Thiếu cả hai là gate in `ngành: khong-ro` và B4
+**không chạy** — trước 24/09/2026 mọi bài `infobox-*` đều rơi vào ca này, nên
+gate báo 0 nghi ngờ trong khi optimizer chèn `Asus` → `/laptop-asus` vào bài máy
+bàn. Thấy `khong-ro` ở bài danh mục thì thêm `article-url.txt` trước khi tin gate.
+
+**Optimizer tự bỏ 2 loại lệch ngành chắc chắn sai** (log `skip-link: ...`), dùng
+chung logic `scripts/link_category.py` với gate:
+
+- Tên hãng trần → trang hãng ngành khác (`Asus` trong bài máy bàn → `/laptop-asus`).
+- Phụ kiện riêng của sản phẩm khác (`loa` → `/loa-laptop` trong bài máy bàn).
+
+Link sang ngành khác theo nghĩa thường (`khác với laptop`, `đồng bộ với iPhone`)
+optimizer **vẫn chèn** — đúng hay sai phụ thuộc câu, nên để B4 gắn cờ cho người
+đọc. Đừng mở rộng danh sách bỏ tự động sang ca này: làm vậy là cắt link cross-sell
+hợp lệ mà không ai thấy.
 
 **Luật không bắt được** 3 loại, phải đọc câu mới biết — chuyển cho lớp review
 bằng model (xem `references/internal-link-qc-cases.md`, cột "Ai bắt"):
@@ -518,6 +562,84 @@ bằng model (xem `references/internal-link-qc-cases.md`, cột "Ai bắt"):
 - A2/A3: anchor là dòng — câu đang nói về cả dòng hay về một SKU cụ thể?
 - B3: trùng tên khác nghĩa khi đích là bài hỏi đáp (`cổng USB` → `usb-charge-la-gi`).
 - E1: anchor từ chung chung, câu không mang ý định mua.
+
+## Xử lý redirect — hai loại, không loại nào được để nguyên
+
+`scripts/link_redirect.py` đo từng URL đích (HEAD, fallback GET, tối đa 5 chặng)
+rồi `classify()` ra 5 verdict. Hai loại redirect phải xử lý khác nhau:
+
+| Verdict | Nghĩa | Xử lý |
+| --- | --- | --- |
+| `ok` | 200, không redirect | dùng thẳng |
+| `redirect` | đổi sang URL mới **cùng nội dung** (`hoi-dap/bv-{id}` → slug thật, slug gõ nhầm → slug đúng) | **luôn** thay bằng URL cuối |
+| `offtopic` | bài bị xoá/gộp: redirect về trang chủ, rơi khỏi hệ bài, hoặc category về trang rộng hơn (`/laptop-hp` → `/laptop`) | tìm link thay thế, không có thì **gỡ link giữ chữ** |
+| `dead` | 404/410/5xx | như `offtopic` |
+| `unknown` | không đo được (mất mạng, bị chặn) | **giữ nguyên**, ghi chú |
+
+`unknown` giữ nguyên là cố ý: coi không-đo-được là hỏng thì mất mạng một lần là
+rụng sạch link cả bài. Nhưng ứng viên **thay thế** thì ngược lại — phải tự chứng
+minh 200 sạch mới được nhận (`lr.alive_final()` trả None cho `unknown`).
+
+**Tìm link thay thế** (`find_link_replacement()` trong `optimize_content.py`) chạy
+cho cả link script định chèn lẫn href có sẵn trong source. Ứng viên phải thoả cả ba:
+
+1. cùng **loại đích** (`lr.dest_kind`): bài hỏi đáp thay bài hỏi đáp, danh mục thay
+   danh mục — lấy trang danh mục thay một bài đã xoá là đổi thứ người đọc được mời tới;
+2. **không lệch ngành hàng** của bài (cùng `link_category` như lúc chèn link);
+3. **trả 200 sạch**, không redirect.
+
+Thứ tự thử: ứng viên **cùng keyword** trước (Sheet thường có nhiều URL cho một
+keyword), rồi keyword tương đương (cụm này chứa trọn cụm kia: `laptop hp` ↔ `hp`,
+nhưng không phải `laptop hp` ↔ `laptop dell`). Với href có sẵn trong source thì
+keyword lấy từ **anchor text**.
+
+Mọi ca đều in một dòng log, đọc được thẳng trong output:
+
+```text
+[REDIRECT] hp: laptop-hp -> laptop-hp-compaq
+[THAY] màn hình lg: man-hinh-may-tinh-lg (category redirect về trang rộng hơn) -> ... (ung vien 'màn hình máy tính')
+[GO] bo link 'lenovo legion' -> laptop-lenovo-legion: ...; khong co ung vien thay the con song
+[GO] go link 'Xem thêm: ...' -> hoi-dap/...: HTTP 404; khong co ung vien thay the, giu nguyen chu
+```
+
+Href có sẵn trong source (box "Xem thêm", link PDP viết tay) **cũng bị xử lý**,
+không chỉ link script tự chèn. Trước 29/09/2026 nhánh này chỉ in cảnh báo rồi để
+nguyên href; owner bỏ cách đó — cảnh báo trong log không cứu được người đọc của
+bài đã air. Gỡ vẫn **giữ nguyên chữ**, nên câu văn không đứt.
+
+`--offline` (hoặc `MWG_LINK_OFFLINE=1`) tắt toàn bộ phần mạng: không resolve,
+không tìm thay thế, không gỡ gì cả — và output **nói rõ là chưa kiểm**.
+
+## Vòng review Anti — BẮT BUỘC sau mỗi lần optimize
+
+Mọi lần chạy `optimize_content.py` có **chèn/sửa link hoặc chuẩn hoá bảng** đều
+phải qua vòng này trước khi bài được coi là chốt. Áp cho mọi dạng bài (top SP,
+infobox, hỏi đáp) và **mọi số lượng link** — bài chỉ có 2 link cũng không được
+miễn. Đây là bước bắt buộc, không phải khuyến nghị.
+
+```text
+optimizer chèn → Anti review & tự sửa từng link → Claude đọc lại bảng của Anti → chốt
+```
+
+1. Dispatch qua crew (skill `agent-crew`), worker **Antigravity** — rule đã thành văn (3 câu hỏi
+   ngữ cảnh + rule trọn cụm + bảng verdict redirect ở trên) nên đúng tuyến Anti.
+2. Brief: `references/anti-link-review-brief.md` — **bản dùng chung duy nhất**,
+   `tgdd-top-product-article` trỏ về đây chứ không giữ bản riêng.
+3. Anti **tự sửa** trong `final-content.html`: gỡ link sai vật, nới anchor cho trọn
+   cụm, thay href redirect bằng URL cuối, thay/gỡ href chết-lệch đích. Chỉ đụng thẻ
+   `<a>`, không đổi một chữ nào của thân bài. Evidence phải có bảng **trước → sau**
+   từng link (anchor | URL cũ → mới hoặc gỡ | lý do).
+4. **Dispatcher không nhận evidence khi bài còn href redirect hoặc chết** — chạy lại
+   `check_internal_links.py` + `validate_article.py` để kiểm, còn F2/F3 hay
+   `link-http` FAIL thì trả job về cho Anti.
+5. **Claude review lại** rồi mới chốt: đọc bảng trước → sau, tự chấm 3 câu hỏi cho
+   từng dòng Anti đã sửa, và đếm link biến mất mà bảng không giải thích. Anti tự khai
+   "đã kiểm hết" **không tính** (`anti-self-reported-stats-unreliable`).
+6. Sửa ở `final` thì nhớ: lần optimize sau ghi đè. Thay đổi nào đúng về bản chất
+   (câu văn thiếu chỗ neo hãng, keyword sai) phải đẩy ngược về `source-content.html`.
+
+Dòng cuối output của `optimize_content.py` là `[CHUA CHOT] can Anti review link
+(bat buoc)` — còn thấy dòng đó mà chưa có bảng trước → sau thì bài chưa xong.
 
 ## QA sau khi chạy — bắt buộc đếm link theo NGUỒN
 

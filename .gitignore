@@ -8,3 +8,4 @@ node_modules/
 .codex/skills/
 .agents/skills/
 .gemini/skills/
+skills/viet-infobox-apple/mdm.config.json

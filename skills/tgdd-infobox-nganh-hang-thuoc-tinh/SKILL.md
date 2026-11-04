@@ -43,7 +43,10 @@ Có thể nhận thêm brief, đối tượng mục tiêu, điểm cần nhấn 
    bài **chưa** qua bước chèn link thì **chưa** được coi là hoàn tất. Có 2
    ngoại lệ được chèn link tay ngay khi viết draft, cả hai đều bắt buộc verify
    URL thật trước khi chèn (không suy đoán, không lấy từ trí nhớ) — xem
-   "Latest feedback rules" bên dưới và `references/formatting-rules.md`.
+   "Latest feedback rules" bên dưới và `references/formatting-rules.md`. Có
+   thêm 1 ngoại lệ thứ ba luôn bắt buộc: sapo H2 phải có đúng 1 self-link về
+   chính URL danh mục đang viết, gắn vào từ khóa chính — xem
+   `references/formatting-rules.md` mục "Self-link ở sapo".
 3. Không xếp hạng thương hiệu và không viết “hãng nào tốt nhất”.
 4. Không mặc định phải audit giá, tồn hàng, khuyến mãi hoặc trạng thái kinh doanh theo ngày và khu vực.
 5. Phần CTA tổng hợp ưu đãi và chính sách từ các sản phẩm trong danh mục rồi viết thành lợi ích mua hàng; không kể lại cách website hiển thị dữ liệu.
@@ -52,6 +55,7 @@ Có thể nhận thêm brief, đối tượng mục tiêu, điểm cần nhấn 
 
 ## Latest feedback rules
 
+- Write for a reader who is not in the trade: do not only transmit information and assume the reader understands. Common terms (CPU, RAM, SSD) need no explanation, but odd or jargon terms (TGP, NPU, WUXGA, xung nhịp, render, RAM hàn chết) must be explained once in plain words or replaced. Read `references/writing-rules.md` mục "Đặt mình vào người đọc".
 - Keep the TGDĐ purchase CTA compact: one section heading, a short lead, checklist bullets, and an optional short closing sentence. Do not create smaller headings inside this CTA.
 - Before a comparison table, use one simple reader-facing lead sentence. Do not explain editorial choices or research methodology.
 - Merge only headings that answer the same purchase question. The classification, brand, and highlighted-products sections each keep a distinct role and must not be merged. Read the detailed overrides in `references/formatting-rules.md`, `references/cta-rules.md`, and `references/final-checklist.md`.
@@ -62,3 +66,12 @@ Có thể nhận thêm brief, đối tượng mục tiêu, điểm cần nhấn 
 - Không dùng cảm thán hoặc ví von đặt trong dấu ngoặc kép kiểu văn báo mạng, ví dụ "hụt hơi", "sát thủ phần cứng", "treo máy", "hồi sinh", "cánh tay phải". Đây là lối viết khoa trương vi phạm mục Giọng văn ở `references/writing-rules.md`; viết lại thành câu trung tính mô tả đúng hiện tượng.
 - Câu trả lời FAQ phải là một đoạn văn liền mạch, **không được chèn `<ul>/<li>` bên trong câu trả lời** dù nội dung có nhiều ý — lỗi hay tái phạm nhất của mục FAQ dù `references/formatting-rules.md` đã có rule "không dùng bullet con". Nếu một câu hỏi có nhiều nhánh (ví dụ so sánh 2 lựa chọn), nối các nhánh bằng câu văn, không tách bullet.
 - Mục "Tại sao nên mua / sử dụng...": Các lợi ích / tiêu chí con BẮT BUỘC PHẢI format thành heading con H4 (`#### ...` / `<h4>...</h4>`), tuyệt đối không dùng đoạn văn in đậm (`**...**` / `<p><strong>...</strong></p>`) giả heading, để chuẩn cấu trúc heading CMS và đảm bảo quy tắc phủ hình AI (`image-ai-generate`) luôn tạo hình riêng cho từng mục.
+- Bảng `Các sản phẩm ... nổi bật tại Thế Giới Di Động` cần thêm cột thứ 4
+  **"Điểm mạnh & phù hợp với"**: 1-2 câu so sánh tương đối giữa các sản phẩm
+  trong chính bảng đó (ví dụ "rẻ nhất bảng", "RAM cao hơn hẳn so với mức giá",
+  "màn hình tần số quét cao hơn các máy còn lại"), không suy rộng danh tiếng
+  của dòng cao cấp cùng tên hãng sang một sản phẩm khác/dòng giá rẻ chưa được
+  kiểm chứng cùng đặc điểm đó. Chi tiết ở `references/formatting-rules.md`.
+- Không đánh số thủ công trước heading (`1. `, `2. `...) — CMS Type 3 chỉ
+  phân cấp bằng H2/H3/H4. Khi biên tập một bài đã có sẵn đang đánh số kiểu
+  này, bỏ số đó trong bản giao, không giữ theo bài gốc.
