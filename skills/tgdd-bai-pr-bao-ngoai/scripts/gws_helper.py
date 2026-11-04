@@ -10,7 +10,7 @@ import os
 import subprocess
 import sys
 
-GWS_CONFIG_DIR = os.path.expanduser("~/.config/gws")
+GWS_CONFIG_DIR = os.environ.get("GOOGLE_WORKSPACE_CLI_CONFIG_DIR", os.path.expanduser("~/.config/gws"))
 EXPECTED_ACCOUNT = os.environ.get("GWS_EXPECTED_ACCOUNT", "")
 
 

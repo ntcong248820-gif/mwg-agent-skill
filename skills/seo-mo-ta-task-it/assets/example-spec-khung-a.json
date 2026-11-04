@@ -1,0 +1,56 @@
+{
+  "template": "A",
+  "title": "[TGDĐ - ĐMX] Lấy lên khai báo Meta SEO cho Trang đệm Hãng trong CMS V2",
+  "orientation": "auto",
+  "info": {
+    "bo_phan_yeu_cau": "SEO/Traffic",
+    "ngay_khoi_tao": "09/09/2025",
+    "lead_task": "Lan - 100001",
+    "support_task": "",
+    "site_ap_dung": "1 (Thế Giới Di Động), 2 (Điện Máy Xanh)",
+    "extra": {"Nơi khai báo": "CMS V2 - Chỉnh sửa hãng sản xuất"}
+  },
+  "history": [
+    {"ngay": "09/09/2025", "name": "Lan - 100001", "mo_ta": "Khởi tạo tài liệu"}
+  ],
+  "images": {},
+  "body": [
+    {"h1": "3. Mô tả chi tiết yêu cầu"},
+    {"h2": "3.1. Mục đích task"},
+    {"bullets": [
+      "**Mục đích:** Tách Title/Meta Description của Trang **Đệm + Hãng** khỏi Trang **NH + Hãng** để không trùng lặp, hỗ trợ ontop từ khoá của từng trang.",
+      "**Hiện tại:** CMS V2 đã có vùng khai báo Title/des riêng cho Trang Đệm + Hãng, nhưng web không lấy vùng này mà kéo lên Title/des của Trang NH + Hãng.",
+      "**Mong muốn:** IT hỗ trợ lấy lên đúng vùng khai báo Meta SEO của Trang Đệm + Hãng trong CMS V2."
+    ]},
+    {"p": "**=> Trùng lặp Title/des hàng loạt giữa Trang NH + Hãng và Trang Đệm + Hãng, giảm tỷ lệ ontop từ khoá.**"},
+    {"h2": "3.2. Phạm vi áp dụng"},
+    {"table": {"label_col": true, "widths": [1, 3], "rows": [
+      ["Site", "Thế Giới Di Động (site 1), Điện Máy Xanh (site 2)"],
+      ["Hệ trang", "Tất cả Trang Đệm + Hãng (trang NH cha có chứa NH con, tạo trên CMS Ngành hàng)"],
+      ["Link ví dụ", "- Web: [https://www.thegioididong.com/sac-cap-apple](https://www.thegioididong.com/sac-cap-apple)\n- Web: [https://www.dienmayxanh.com/bep-dien-bosch](https://www.dienmayxanh.com/bep-dien-bosch)"],
+      ["Ngoài phạm vi", "Trang NH + Hãng giữ nguyên cách lấy Title/des hiện tại."]
+    ]}},
+    {"h2": "3.3. Chi tiết task"},
+    {"table": {"header": ["Hiện tại", "Mong muốn"], "rows": [[
+      "- Trang Đệm + Hãng đang kéo Title/des của Trang NH + Hãng.\n- Ví dụ: [https://www.dienmayxanh.com/bep-dien-bosch](https://www.dienmayxanh.com/bep-dien-bosch) trùng Title với [https://www.dienmayxanh.com/bep-tu-bosch](https://www.dienmayxanh.com/bep-tu-bosch)",
+      "- **Ưu tiên 1:** có khai báo ở vùng Thông tin SEO của Trang Đệm + Hãng trong CMS V2 → lấy đúng nội dung đã khai.\n- **Ưu tiên 2:** vùng khai báo trống → lấy theo rule sinh động bên dưới. Không lấy của Trang NH + Hãng.\n- **Rule TGDĐ:** Title = [Tên trang đệm] + [Hãng] + chính hãng, giá rẻ\n- Ví dụ: Sạc cáp Apple chính hãng, giá rẻ"
+    ]]}},
+    {"h2": "3.4. Tiêu chí nghiệm thu"},
+    {"table": {"header": ["Hạng mục", "Kết quả mong muốn"], "widths": [1, 2], "rows": [
+      ["Trang Đệm + Hãng có khai báo", "Title/des trên web = nội dung khai trong CMS V2, đúng từng ký tự"],
+      ["Trang Đệm + Hãng để trống khai báo", "Title/des sinh theo rule Ưu tiên 2, không trùng Trang NH + Hãng"],
+      ["Trang NH + Hãng", "Không đổi so với trước khi làm task"],
+      ["Cả 2 site", "Đúng trên TGDĐ (site 1) và ĐMX (site 2), desktop và mobile"]
+    ]}}
+  ],
+  "tracker": {
+    "tab": "ĐMX",
+    "uu_tien": "SEO 2",
+    "site": "DMX",
+    "du_an": "Điện Máy Xanh",
+    "pic": "IT",
+    "loai_task": "Bug",
+    "muc_dich": "IT hỗ trợ lấy lên vùng khai báo Meta SEO cho Trang Đệm + Hãng trong CMS V2 vì Title/des của Trang Đệm + Hãng đang tự kéo Title/des của Trang NH + Hãng => trùng lặp Title/des hàng loạt, ảnh hưởng ontop từ khoá.",
+    "phu_trach": "Lan - 100001"
+  }
+}

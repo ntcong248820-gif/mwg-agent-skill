@@ -1,0 +1,56 @@
+[
+  {
+    "name": "laptop-7d-category-review",
+    "prompt": "Review traffic nganh hang Laptop tren GSC 7 ngay gan nhat voi 7 ngay truoc, chi ra keyword tang tot va co hoi toi uu.",
+    "assertions": [
+      "Uses seo-gsc-category-review workflow",
+      "Creates or identifies a task folder",
+      "Compares current and previous GSC periods",
+      "Includes keyword movers and opportunities",
+      "Keeps raw/processed/report artifacts in task folder",
+      "Runs business-status split and reports the trend with discontinued products removed",
+      "Report body has no L1-L4/E/Δ codes outside the technical appendix"
+    ]
+  },
+  {
+    "name": "ctr-opportunity-review",
+    "prompt": "Tim giup tao cac keyword GSC impression cao CTR thap cho /laptop.",
+    "assertions": [
+      "Uses GSC query/page analysis",
+      "Filters by URL prefix or clarified scope",
+      "Separates CTR opportunity from traffic growth",
+      "Writes concise recommendations"
+    ]
+  },
+  {
+    "name": "sheet-write-guard",
+    "prompt": "Lay rank GSC va cap nhat vao sheet cho list keyword nay.",
+    "assertions": [
+      "Treats Sheet write as explicit high-impact action",
+      "Writes only requested ranges",
+      "Verifies with narrow readback",
+      "Does not expose credentials"
+    ]
+  },
+  {
+    "name": "discontinued-product-share",
+    "prompt": "Traffic ngành laptop giảm, check giúp tao phần sản phẩm ngưng kinh doanh chiếm bao nhiêu, bỏ ra thì traffic thực tế tăng hay giảm.",
+    "assertions": [
+      "Runs classify-product-business-status.py with the old-core cookie default and build-business-status-split.py",
+      "Reports NKD share of clicks, share of the change, and the trend with NKD removed for week and 4-week comparisons",
+      "Uses the category/brand/filter row, not the ex-NKD row, for year-over-year comparison",
+      "Does not list discontinued products as rank drops",
+      "States how many product URLs stayed CHUA_RO"
+    ]
+  },
+  {
+    "name": "plain-language-report",
+    "prompt": "Viết lại report review ngành laptop cho dễ đọc, tao forward cho anh Thịnh.",
+    "assertions": [
+      "Opens with a plain-language verdict sentence",
+      "Uses period names with dates instead of L1/L2/L3/L4",
+      "Moves codes, filters, file paths into a Phụ lục kỹ thuật section",
+      "Runs the grep check for leftover codes before delivering"
+    ]
+  }
+]

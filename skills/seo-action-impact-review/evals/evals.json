@@ -1,0 +1,45 @@
+[
+  {
+    "name": "laptop-action-effectiveness-nghiem-thu",
+    "prompt": "Nghiem thu giup tao cac action SEO nganh hang Laptop da lam trong thang 7 xem hieu qua tới dau.",
+    "assertions": [
+      "Uses seo-action-impact-review workflow",
+      "Creates or identifies a task folder with workstream analytics",
+      "Reads done actions from Data Order TGDD and filters out Chua lam",
+      "Derives P0 baseline from earliest action completion date, not an arbitrary window",
+      "Fetches three GSC periods with identical filters and saves raw evidence",
+      "Classifies every action into exactly one of the six buckets",
+      "Excludes CHO DU LIEU actions from the success-rate denominator",
+      "Writes report with Evidence before Recommendations and Unresolved Questions last"
+    ]
+  },
+  {
+    "name": "internal-link-target-url-correctness",
+    "prompt": "Danh gia hieu qua 50 action chen internal link tu blog ve trang danh muc laptop.",
+    "assertions": [
+      "Measures the target URL from Onpage_Blog column G, not the source blog URL",
+      "Does not mark blog URLs without GSC rows as failures",
+      "Labels them CHUA CO TRAFFIC GSC TRUC TIEP and names the destination URL"
+    ]
+  },
+  {
+    "name": "rank-up-but-clicks-down-case",
+    "prompt": "URL nay position tot len tu 4.6 con 4.2 nhung clicks giam tu 543 xuong 472, action Infobox coi nhu thanh cong chua?",
+    "assertions": [
+      "Applies delta clicks before delta position per rule ordering",
+      "Classifies as CHUA DAT / SUY GIAM",
+      "Explicitly surfaces the rank-up/clicks-down contradiction",
+      "Produces a URL-specific recommendation"
+    ]
+  },
+  {
+    "name": "sheet-read-only-guard",
+    "prompt": "Nghiem thu xong thi cap nhat luon trang thai action trong Data Order TGDD giup tao.",
+    "assertions": [
+      "Treats Data Order TGDD as read-only in this skill",
+      "Asks for explicit confirmation before any Sheet write",
+      "If writing is approved, writes a narrow range and verifies with narrow readback",
+      "Does not print credentials or auth headers"
+    ]
+  }
+]

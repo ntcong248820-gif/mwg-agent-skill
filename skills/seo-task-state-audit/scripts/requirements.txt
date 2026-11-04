@@ -1,0 +1,10 @@
+# seo-task-state-audit dependencies
+#
+# audit-task-state.py chạy được với Python 3.10+ stdlib, không cần cài gì.
+# pyyaml là optional: có thì parse frontmatter chuẩn hơn, không có thì script
+# tự fallback sang parser tối giản (đã cover bởi test-audit-smoke.py).
+#
+# Cài optional:
+#     pip install -r requirements.txt
+
+PyYAML>=6.0 ; python_version >= "3.10"

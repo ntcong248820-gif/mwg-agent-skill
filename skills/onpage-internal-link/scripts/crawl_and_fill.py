@@ -37,7 +37,7 @@ CURL_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (K
 J_VALUE = "Chèn link vào text có sẵn"
 
 GWS_ENV = dict(os.environ)
-GWS_ENV["GOOGLE_WORKSPACE_CLI_CONFIG_DIR"] = os.path.expanduser("~/.config/gws")
+GWS_ENV["GOOGLE_WORKSPACE_CLI_CONFIG_DIR"] = os.environ.get("GOOGLE_WORKSPACE_CLI_CONFIG_DIR", os.path.expanduser("~/.config/gws"))
 
 
 def fetch_html(url: str) -> str:

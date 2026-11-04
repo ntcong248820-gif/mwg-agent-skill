@@ -1,0 +1,12 @@
+interface:
+  display_name: TGDĐ SEO Title Description
+  short_description: Viết meta SEO evergreen hoặc CTA mạnh và điền Sheet đúng cột
+  icon_small: assets/icon.svg
+  icon_large: assets/icon.svg
+policy:
+  products:
+  - chatgpt
+  - codex
+  - api
+  - atlas
+  allow_implicit_invocation: true
