@@ -1,0 +1,12 @@
+{
+  "mdm": {
+    "_note": "Config đủ ID màn cho onpage-mdm-khai-bao, lấy qua DevTools ngày 29/10/2026 (function/getlistfordisplay). Không chứa token.",
+    "uiOrigin": "https://mdm.mwgroup.vn",
+    "apiBase": "https://erpapp.tgdd.vn/mwg-app-masterdata-dynamic-service/api/v1/",
+    "pimApiBase": "https://erpapp.tgdd.vn/mwg-app-pim-service/api/v1/",
+    "pimCompanyId": "1",
+    "category": {"objectId": "23243b5f-9ccd-49b4-844d-8e8f7629dfe9", "tableId": "ad53d05c-ee4b-412a-83de-8a325dbe9fa6", "functionId": "31fe1400-7b81-4cc0-952d-787ff3b9d158", "rootId": "db40e1a6-2898-4b95-8efd-bac68d589621"},
+    "brand": {"objectId": "070695d7-d1a8-4f02-9e18-9d6215c8ee74", "tableId": "965dfbbd-57bf-4283-9a86-6dbbcdbf88a1", "functionId": "6546c985-b431-4b40-a41b-02950d54abf3"},
+    "filter": {"objectId": "52f84ca6-303a-4b10-8d60-a0adfa4298e6", "tableId": "965dfbbd-57bf-4283-9a86-6dbbcdbf88a1", "functionId": "d3f0eddd-56a4-4a32-96a3-794a2ffa45c0", "relationId": "b3520d79-39ef-43f4-ad96-4b8e14e7b3e6"}
+  }
+}

@@ -37,6 +37,7 @@ Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `
 | [`cms-topzone-tao-bai`](skills/cms-topzone-tao-bai) | Như `cms-faq-tao-bai` cho CMS V2 TopZone (`siteId=16`): thumb 1200x628, mục Mua TopZone, nút CTA, shortcode `[product]` | Như trên |
 | [`chen-link-noi-bo`](skills/chen-link-noi-bo) | Rule + script quét internal link cho bài TGDĐ/ĐMX/TopZone theo 5 loại keyword và link tối thiểu từng dạng bài; chống trùng URL/anchor | Python 3.9+, `gws` CLI, `SHEET_ALL_KW_ID` |
 | [`seo-datastudio-dashboard`](skills/seo-datastudio-dashboard) | Đọc, dựng và sửa dashboard Data Studio / Looker Studio bằng RPC nội bộ chạy trong tab Chrome đã đăng nhập: thêm/sửa/xoá page, chart, text, filter, blend, calculated field, đổi theme; dry-run trước khi ghi, tự tạo revision checkpoint và khôi phục được; render kiểm chart lỗi + screenshot. Kèm chuẩn thiết kế dashboard | Node 18+, `chrome-devtools-mcp`, skill `chrome-profile`, profile Chrome có quyền sửa report (`--profile` hoặc `DATASTUDIO_CHROME_PROFILE`) |
+| [`viet-infobox-apple`](skills/viet-infobox-apple) | Chuẩn viết/biên tập nội dung SEO Apple theo format TGDĐ (H2 sapo, H3/H4, mục Mua, Ưu đãi, FAQ, bảng, internal link, tối ưu AI Overview) và quy trình trọn gói viết MỚI infobox Hãng/Filter/Dòng filter trên PIM/MDM (outline → Antigravity viết → ảnh → HTML CKEditor → ghi live → nghiệm thu) | Node 18+, Python 3.9+, `chrome-profile`/DevTools hub, `onpage-mdm-khai-bao` |
 
 
 4 skill `tgdd-infobox-*` và `tgdd-review-outline-infobox` là **bộ rule biên tập**,
