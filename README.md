@@ -6,7 +6,7 @@ runtime tương thích (Codex, Antigravity, Gemini CLI).
 Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `scripts/`,
 `references/`. Runtime đọc `SKILL.md` khi mô tả khớp với việc người dùng đang làm.
 
-## Danh mục Skill (44 skills)
+## Danh mục Skill (43 skills)
 
 ### Hệ CMS & MDM/PIM (Tạo bài, Air, Khai báo, Sửa nội dung)
 
@@ -33,7 +33,6 @@ Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `
 | [`content-laptop-product`](skills/content-laptop-product) | Viết, tối ưu và làm hình bài Content SP + đặc điểm nổi bật cho nhóm Laptop TGDĐ | Python 3.9+, Google Workspace CLI, Pillow |
 | [`tgdd-top-product-article`](skills/tgdd-top-product-article) | Viết mới hoặc renew bài Top N sản phẩm TGDĐ/ĐMX: verify còn kinh doanh, HTML CMS, 21 validate checks | Python 3.9+, BeautifulSoup |
 | [`tgdd-seo-title-description`](skills/tgdd-seo-title-description) | Viết, chỉnh sửa, kiểm tra và điền SEO Title/Meta Description cho TGDD/ĐMX (Evergreen và CTA mạnh) | Python 3.9+, Google Workspace CLI |
-| [`content-seo-semantic-audit`](skills/content-seo-semantic-audit) | Soát và chấm bài SEO semantic: lint đếm từ/từ khoá/brand, coverage, rà LSI, 7 checklist bởi 3 giám khảo | AI agent |
 | [`tgdd-bai-pr-bao-ngoai`](skills/tgdd-bai-pr-bao-ngoai) | Viết bài báo PR (booking PR) đăng báo ngoài (VnExpress, Kenh14...) giọng reviewer, Google Doc rich text inline | Python, ImageMagick, Google Workspace CLI |
 | [`viet-bao-PR`](skills/viet-bao-PR) | Viết mới/viết lại bài PR báo điện tử và GuestPost cho mọi dự án TGDĐ, TopZone, ĐMX: đọc sheet plan, tạo Drive/Doc, research theo thứ bậc nguồn, văn phong báo chí, chèn anchor, verify, cập nhật sheet | Google Workspace CLI |
 | [`duyet-bao-PR`](skills/duyet-bao-PR) | Duyệt bài PR báo điện tử/GuestPost (Google Doc): đối chiếu sheet plan và KW, chạy checklist title/sapo/anchor/fact/giá live/ảnh, tự sửa lỗi rõ ràng, báo cáo từng bài | Google Workspace CLI |
