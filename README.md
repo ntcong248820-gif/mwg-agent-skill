@@ -6,7 +6,7 @@ runtime tương thích (Codex, Antigravity, Gemini CLI).
 Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `scripts/`,
 `references/`. Runtime đọc `SKILL.md` khi mô tả khớp với việc người dùng đang làm.
 
-## Danh mục Skill (43 skills)
+## Danh mục Skill (44 skills)
 
 ### Hệ CMS & MDM/PIM (Tạo bài, Air, Khai báo, Sửa nội dung)
 
@@ -37,6 +37,7 @@ Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `
 | [`tgdd-bai-pr-bao-ngoai`](skills/tgdd-bai-pr-bao-ngoai) | Viết bài báo PR (booking PR) đăng báo ngoài (VnExpress, Kenh14...) giọng reviewer, Google Doc rich text inline | Python, ImageMagick, Google Workspace CLI |
 | [`viet-bao-PR`](skills/viet-bao-PR) | Viết mới/viết lại bài PR báo điện tử và GuestPost cho mọi dự án TGDĐ, TopZone, ĐMX: đọc sheet plan, tạo Drive/Doc, research theo thứ bậc nguồn, văn phong báo chí, chèn anchor, verify, cập nhật sheet | Google Workspace CLI |
 | [`duyet-bao-PR`](skills/duyet-bao-PR) | Duyệt bài PR báo điện tử/GuestPost (Google Doc): đối chiếu sheet plan và KW, chạy checklist title/sapo/anchor/fact/giá live/ảnh, tự sửa lỗi rõ ràng, báo cáo từng bài | Google Workspace CLI |
+| [`fresh-content`](skills/fresh-content) | Làm mới bài content HTML đang chạy trên TGDĐ/ĐMX/TopZone: check giá và khuyến mãi live, sửa chính tả/factual, rải kw GSC chưa có (chỉ thêm, không sửa kw cũ), bổ sung FAQ và bài liên quan | Python 3.9+, GSC MCP |
 
 ### Bộ Rule Infobox TGDD
 

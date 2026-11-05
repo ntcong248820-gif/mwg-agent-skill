@@ -46,7 +46,7 @@ Giai đoạn mở bán iPhone 18 Pro/Pro Max (từ 28/09/2026):
   42 trước khi mua."
 
 Giai đoạn đặt cọc iPhone Duo (từ 16/10/2026): CTKM TGDĐ và TopZone dùng chung, theo file KM
-Drive `1E2iXdUvvrnc2axg-JcOxmrJwMRyez_5K` (tab "Pre-order"). Đoạn TGDĐ user duyệt 15/10/2026
+Drive `<DRIVE_PREORDER_ID>` (tab "Pre-order"). Đoạn TGDĐ user duyệt 15/10/2026
 (câu cầu nối tự viết phía trước, phần sau nguyên văn):
 "Trong giai đoạn đặt trước iPhone Duo, Thế Giới Di Động triển khai nhiều chương trình hỗ trợ
 người mua, gồm trả chậm 0% với mức trả trước từ 10% và kỳ hạn đến 18 tháng, thu cũ đổi mới trợ
