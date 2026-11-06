@@ -57,7 +57,7 @@ Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `
 | [`image-seo-pipeline`](skills/image-seo-pipeline) | Nén ImageMagick quality 85, gọi Gemini API sinh alt text, bắn EXIF (Copyright TGDD), xoay vòng key pool | Python, ImageMagick, exiftool, GEMINI_API_KEY |
 | [`image-ai-generate`](skills/image-ai-generate) | Tạo ảnh minh họa AI cho bài viết bằng OpenAI Image API, giữ thiết kế SP thật, resize 1200x675 hoặc 800x450, đóng logo TGDD | Python, OPENAI_API_KEY |
 | [`chen-link-noi-bo`](skills/chen-link-noi-bo) | Rule + quy trình chèn internal link bài content tĩnh TGDD/DMX/TopZone theo 5 loại KW, nguồn tra All KW | Python 3.9+, Google Workspace CLI, SHEET_ALL_KW_ID |
-| [`onpage-internal-link`](skills/onpage-internal-link) | Đề xuất chèn internal link bài Hỏi đáp/Game App/Kinh nghiệm hay: crawl live, chọn đúng đoạn liên quan, viết mention | Python (bs4), Google Workspace CLI |
+| [`onpage-internal-link`](skills/onpage-internal-link) | Đề xuất chèn internal link bài Hỏi đáp/Game App/TekZone/Kinh nghiệm hay: đọc order tab plan onpage, crawl live, phân 4 nhánh (đúng guideline / sửa anchor / gắn vào keyword có sẵn / viết câu mới), ghi sheet WF đi link | Python 3.9+, Google Workspace CLI, SHEET_PLAN_ONPAGE_ID, SHEET_GAME_APP_ID |
 
 ### Phân tích SEO, GSC, GA4 & Báo cáo
 
@@ -67,7 +67,7 @@ Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `
 | [`seo-gsc-compare`](skills/seo-gsc-compare) | So sánh GSC 2 kỳ cho URL bất kỳ: top keyword, clicks, impressions, position | Python 3.9+, GSC MCP |
 | [`seo-gsc-rank-check`](skills/seo-gsc-rank-check) | Đo thứ hạng keyword từ GSC cho thegioididong.com và dienmayxanh.com, ghi ngược Google Sheet | Python 3.9+, Google Workspace CLI, GSC MCP |
 | [`seo-ga4-organic-check`](skills/seo-ga4-organic-check) | Đối chiếu GA4 Organic Search sessions với GSC clicks cho nhóm landing page | Python 3.9+, GA4 MCP |
-| [`seo-keyword-research`](skills/seo-keyword-research) | Research keyword Ahrefs API tiết kiệm units, lọc keep/review/drop theo intent từng dạng trang | Python 3.9+, AHREFS_API_KEY |
+| [`seo-keyword-research`](skills/seo-keyword-research) | Research keyword Ahrefs API tiết kiệm units, GSC tiền nhiệm cho SP mới, lọc keep/review/drop theo intent từng dạng trang, bản tiêu chuẩn của dòng con, tick KW chính (volume ≥ 10, đúng chính tả) | Python 3.9+, AHREFS_API_KEY |
 | [`seo-datastudio-dashboard`](skills/seo-datastudio-dashboard) | Đọc, dựng và sửa dashboard Data Studio / Looker Studio bằng RPC nội bộ tab Chrome: chart, filter, calculated field | Node 18+, chrome-profile, DevTools MCP |
 | [`seo-action-impact-review`](skills/seo-action-impact-review) | Nghiệm thu hiệu quả action SEO đã làm bằng GSC (clicks/CTR/rank 3 kỳ) | Python 3.9+, Google Workspace CLI, GSC MCP |
 | [`seo-cso-optimize`](skills/seo-cso-optimize) | Tối ưu Content Sản Phẩm đẩy SEO danh mục: audit 5 tiêu chí bài viết SP, log Data Order | Python 3.9+, Google Workspace CLI |

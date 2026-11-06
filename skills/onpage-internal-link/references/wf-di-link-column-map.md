@@ -1,77 +1,85 @@
-# WF đi link — Column Map chi tiết 22 cột A–V
+# Column map — tab plan `onpage` + tab `WF đi link` (22 cột A–V)
 
-## Spreadsheets được hỗ trợ
+## Spreadsheets
 
-Cấp ID qua biến môi trường (không hardcode ID nào trong skill này):
+| Vai trò | Tên | ID mặc định (env ghi đè) |
+| --- | --- | --- |
+| Plan order | Plan SEO - Auto, tab `onpage` | `$SHEET_PLAN_ONPAGE_ID` |
+| WF Hỏi đáp / Game App / TekZone | PHỐI HỢP SEO - CONTENT GAME APP Chạy AI, tab `WF đi link`, tab `HDSD WF đi link` | `$SHEET_GAME_APP_ID` |
+| WF Kinh nghiệm hay / Vào bếp ĐMX | tab `WF đi link` | không có mặc định (`SHEET_KINH_NGHIEM_HAY_ID`) |
 
-1. **Game App / Hỏi Đáp (thegioididong.com):**
-   - **ID:** `$SHEET_GAME_APP_ID`
-   - **Tab chính:** `WF đi link`
-   - **Tab hướng dẫn:** `HDSD WF đi link`
+## Tab plan `onpage` (A–G)
 
-2. **Kinh Nghiệm Hay / Vào Bếp (dienmayxanh.com):**
-   - **ID:** `$SHEET_KINH_NGHIEM_HAY_ID`
-   - **Tab chính:** `WF đi link`
-
-## Cột A–G: SEO nhập
-
-| Col | Tên | Giá trị mẫu | Ghi chú |
+| Col | Tên | Ai ghi | Giá trị |
 | --- | --- | --- | --- |
-| A | Ngày add | `19/08/2026` | Ngày SEO thêm dòng |
-| B | Nhân sự SEO | `Tên - Mã NV` | Tên và mã nhân viên |
-| C | Loại hành động | `Đoạn văn` | **FORMULA** — tự tính từ Cột J |
-| D | URL bài tin | `https://www.thegioididong.com/game-app/...` | URL live bài viết |
-| E | Anchor text | `màn hình 24 inch` | Từ/cụm cần bao trong thẻ `<a>` |
-| F | Link cần chèn | `https://www.thegioididong.com/man-hinh-may-tinh-24-inch` | href đích |
-| G | Link cần xóa | _(rỗng)_ | Link cần xóa (nếu có) |
+| A | Keyword cần chèn | SEO | 1 hoặc nhiều keyword, mỗi cái 1 dòng trong ô. **Khoá** cùng C |
+| B | URL cần chèn | SEO | URL đích, ghép cặp theo thứ tự dòng với A |
+| C | URL bài tin | SEO | URL bài live. **Khoá** cùng A |
+| D | Phân loại | Skill | `Có URL` / `Chưa có URL` |
+| E | Nội dung chèn | Skill | Nội dung mới (I) hoặc câu gốc (H) của dòng WF đã ghi |
+| F | Status | SEO → Skill | `Run` → `Doing` → `Done` / `Đã đúng guideline`; lỗi crawl trả về `Run` |
+| G | Ngày order | Skill | Ngày xử lý, theo định dạng các dòng trên |
 
-## Cột H–K: Nội dung (SKILL điền H+J)
+Khoá dòng = (A nguyên văn, C). Không dùng số dòng vì xoá/sort giữa chừng sẽ ghi nhầm dòng.
 
-| Col | Tên | Giá trị | Ghi chú |
+## Tab WF đi link — A–G: thông tin dòng
+
+| Col | Tên header | Giá trị | Ghi chú |
 | --- | --- | --- | --- |
-| **H** | **Nội dung cũ** | `Plain text đoạn văn gốc trên web` | **SKILL điền** — không encode HTML |
-| I | Nội dung mới | _(rỗng)_ | Content điền khi mode "Thêm đoạn văn mới" |
-| **J** | **Hành động chèn** | `Chèn link vào text có sẵn` | **SKILL điền** — giá trị cố định |
-| K | Chèn sau text | _(rỗng)_ | Anchor vị trí sau đoạn văn nào |
+| A | Ngày add | date serial | Không ghi chuỗi `dd/mm/yyyy` |
+| B | Nhân sự SEO | `Tên - Mã NV` | Theo chuỗi user đang dùng; không rõ thì để trống |
+| C | Loại hành động | `Đoạn văn` / `Infobox` | **Dữ liệu**, không phải công thức. Quyết định nhánh của cột O |
+| D | URL bài tin | URL live | |
+| E | Anchor text cần chèn | 1 hoặc nhiều anchor, ngăn `\n` | Viết hoa đúng quy ước hãng |
+| F | Link cần chèn | 1 hoặc nhiều URL, ngăn `\n`, cùng thứ tự E | |
+| G | Link cần xóa | thường trống | |
 
-## Cột L–M: Workflow Content
+## H–K: nội dung (skill điền theo nhánh)
 
-| Col | Tên | Giá trị | Ghi chú |
-| --- | --- | --- | --- |
-| L | Deadline | `25/08/2026` | Content điền |
-| M | Trạng thái | `Pending` / `Done` | Content điền |
+| Nhánh | H Nội dung cũ | I Nội dung mới | J Hành động chèn | K Chèn sau text này |
+| --- | --- | --- | --- | --- |
+| fixAnchor | câu chứa link cũ (hoặc anchor cũ) | câu đã thay anchor (hoặc anchor mới) | `Thay đoạn cũ` | trống |
+| insertText | câu gốc nguyên văn (plain text) | trống | `Chèn link vào text có sẵn` | trống |
+| newContent | trống | câu mới | `Thêm vào dưới đoạn văn` | đoạn neo nguyên văn |
 
-## Cột N–O: Formula tự sinh
+Plain text, không encode HTML, không giữ markup.
 
-| Col | Tên | Formula logic | Ghi chú |
-| --- | --- | --- | --- |
-| N | CMS | `=MAP(D2:D; INDEX(ROW(D2:D)); LAMBDA(...))` | Link CMS từ URL bài tin |
-| **O** | **HTML** | `=MAP(C2:C; E2:E; F2:F; G2:G; H2:H; I2:I; J2:J; INDEX("H"&ROW(...)); LAMBDA(...))` | **Tự sinh HTML `<p><a>...</a></p>`** |
-
-### Công thức Cột O output khi J = "Chèn link vào text có sẵn":
-
-```html
-<p>...text trước...<a title="{E}" href="{F}" target="_blank" rel="noopener">{anchor_match}</a>...text sau...</p>
-```
-
-- Formula tìm first occurrence của anchor text (Cột E) trong plain text (Cột H) và bọc `<a>`.
-- Match case-insensitive: `màn hình 2k` trong H nhưng bài viết viết `2K` → Formula bọc đúng `màn hình 2K`.
-
-## Cột P: Trigger n8n
-
-| Col | Tên | Giá trị | Ghi chú |
-| --- | --- | --- | --- |
-| P | Content cho bắt đầu | `Ready` | Khi = "Ready", webhook n8n trigger tự động chèn vào CMS |
-
-**KHÔNG ghi Cột P trong skill này** — Content team quyết định khi nào Ready.
-
-## Cột Q–V: n8n Automated
+## L–M: Content
 
 | Col | Tên | Ghi chú |
 | --- | --- | --- |
-| Q | Content check | n8n điền |
-| R | QC Status | n8n điền |
-| S | QC Note | n8n điền |
-| T | Backup Doc Link | n8n điền |
-| U | Final Verify | n8n điền |
-| V | Article Context | n8n điền |
+| L | Deadline kì vọng | Content điền |
+| M | Trạng thái | Content điền |
+
+## N–O: công thức neo ở hàng 2 (dạng `MAP`) — không ghi
+
+Đọc `valueRenderOption=FORMULA` tại ô data trả rỗng là bình thường.
+
+**N — CMS:**
+- `thegioididong.com/hoi-dap/…{id}` → `https://cms.thegioididong.com/v2/Faq/NewsEdit?newsId={id}`
+- `thegioididong.com/game-app/…{id}` → `https://cms.thegioididong.com/v2/GameApp/EditNews?newID={id}`
+- Còn lại (TekZone, ĐMX) → `Không hỗ trợ URL này` (bình thường, ghi chú trong report).
+
+**O — HTML** (`IFS` theo C và J):
+
+| Điều kiện | Kết quả |
+| --- | --- |
+| C = `Đoạn văn` và J = `Chèn link vào text có sẵn` | `GENERATE_FINAL_HTML_LINKS(E; F; G; …; H)` — bọc anchor vào **H** |
+| C = `Đoạn văn` (J khác) | `GENERATE_FINAL_HTML_LINKS(E; F; G; …; I)` — bọc anchor vào **I** |
+| C = `Infobox` | `GENERATE_BOX_HTML(E; F; I)` — dựng box mới từ **I** |
+| C trống | trống |
+
+Hệ quả:
+- insertText phải C = `Đoạn văn` (C = `Infobox` sẽ dựng box từ I đang trống).
+- fixAnchor/newContent: anchor phải xuất hiện trong I, nếu không O không có `<a>`.
+- Bọc anchor không phân biệt hoa thường, lấy lần xuất hiện đầu.
+
+## P: trigger n8n
+
+| Col | Tên | Giá trị |
+| --- | --- | --- |
+| P | Content cho bắt đầu | Skill ghi `Hold` khi nạp. Chỉ đổi `Ready` khi user duyệt — `Ready` kích webhook n8n chèn CMS |
+
+## Q–V: n8n tự điền — không ghi
+
+Q Content vào check · R QC Status · S QC Note · T Backup Doc Link · U Final Verify · V Article Context.

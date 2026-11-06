@@ -10,9 +10,9 @@ Rule viết cho thị trường Việt Nam (keyword tiếng Việt). Danh sách 
 
 - Chuẩn hoá: chữ thường, gộp khoảng trắng, cắt dấu `: , - _ + .` ở cuối. Không trùng keyword trong cùng một trang.
 - **Volume:** Ahrefs nhóm 0–10 (trả `0`/null) → ghi **5**. Volume còn lại giữ nguyên.
-- Tiếng Việt **có dấu**: cụm Việt viết thiếu dấu (`man hinh`, `may choi game`) bị drop. Từ vốn không dấu (`laptop`, `tai nghe`) không bị loại.
+- Tiếng Việt **thiếu dấu** (`man hinh`, `sim so dep`): **vẫn giữ** (đi qua rule như keyword thường) nhưng `main=False`, không tick KW chính. Nhận diện: keyword toàn không dấu + chứa cụm trong `NO_DIACRITIC_VI` hoặc âm tiết trong `NEED_DIACRITIC` (`kw_rules.missing_diacritics`). Từ vốn không dấu (`laptop`, `tai nghe`, `mua`) không bị tính là thiếu dấu. Intent blog viết không dấu (`cach`, `huong dan`...) vẫn drop.
 - Không lấy tên nhà bán lẻ (`fptshop`, `cellphones`, `shopee`...) làm keyword.
-- Loại ở MỌI dạng trang (intent blog/hỗ trợ): `review`, `đánh giá`, `so sánh`, `vs`, `specs`, `thông số`, `hướng dẫn`, `cách`,
+- Loại ở MỌI dạng trang (intent blog/hỗ trợ): `review`, `đánh giá`, `quy trình`, `thủ tục`, `nào` (câu hỏi/hệ tin), `so sánh`, `vs`, `specs`, `thông số`, `hướng dẫn`, `cách`,
   `là gì`, `có tốt không`, `driver`, `tải`, `cài đặt`, `lỗi`, `sửa chữa`, `reset`, `firmware`, `ngày ra mắt`...
 - **Intent blog tầng 1 — hỏi/tư vấn/sự cố (drop, mọi dạng trang):** `nên mua`, `nên chọn`, `đáng mua`, `có nên`, `loại nào`,
   `nào tốt/ngon/bền`, `ưu nhược`, `kinh nghiệm`, `mẹo`, `tư vấn`, `xuất xứ`, `bảo hành bao lâu`, `có bền`, `bền không`, `ổn không`,
@@ -24,7 +24,7 @@ Rule viết cho thị trường Việt Nam (keyword tiếng Việt). Danh sách 
 - Giữ: biến thể giá/mua (`giá`, `giá rẻ`, `mua`, `bao nhiêu`, `chính hãng`).
 - **Đọc trang đích trước khi duyệt** (bước nên làm): mở URL, xem sản phẩm đang bán và khoảng giá để xác định intent thật.
   Keyword `giá rẻ` trên trang chỉ bán máy cao cấp là sai intent dù đúng chính tả.
-- Cờ `main` (KW chính): mặc định mọi keyword `keep` đều `True`. Đổi ở `filter_keywords.assign_main`.
+- Cờ `main` (KW chính, tick TRUE) khi **đủ cả 2**: (1) volume search **≥ 10** (`volume_sheet`; nhóm 0–10 ghi 5 hoặc không có số liệu → FALSE) và (2) tiếng Việt **đúng chính tả/có dấu** (không bị `missing_diacritics`). Thiếu 1 trong 2 → vẫn giữ keyword nhưng `main=False`, lý do ghi ở `reason`. Đổi ở `filter_keywords.assign_main` / `MAIN_MIN_VOLUME`.
 
 ## 1. Sản phẩm (`sp`) — tiêu chí là ĐỊNH DANH, không phải volume
 
@@ -37,6 +37,36 @@ nhưng vẫn là keyword đúng, nên volume không phải bộ lọc.
 **Loại:** chứa mã SKU khác sản phẩm (biến thể màu/cấu hình khác) · câu > 6 từ kèm ≥ 2 thông số · intent blog · không liên quan ·
 tên hãng khác (khi tên sản phẩm có ghi hãng).
 **review:** chỉ trùng 1 thành phần tên, hoặc chỉ có mã lạ. Năm (`2025`) được giữ ở sản phẩm.
+
+## 1.1. Quy tắc dòng con, bản tiêu chuẩn (Standard Variant) và sản phẩm mới
+
+Áp dụng khi research từ khóa cho các SKU sản phẩm thuộc một hệ sản phẩm có nhiều biến thể cấu hình (CPU/GPU, RAM, ROM/SSD, màn hình, công nghệ kết nối...):
+
+1. **Không máy móc lược bỏ từ khóa định danh:**
+   - Không tự ý lược bỏ các từ như `wifi`, `inch`, `24`, `14` theo cảm tính. Quyết định giữ hay bỏ dựa trên dữ liệu tìm kiếm thực tế của người dùng trên Google.
+
+2. **Tham chiếu Google Search Console (GSC) của thế hệ tiền nhiệm:**
+   - Khi nghiên cứu sản phẩm mới (chưa ra mắt hoặc mới ra mắt nên Ahrefs chưa kịp ghi nhận volume/trả về 0 hoặc null):
+     - Truy vấn GSC của dòng máy/sản phẩm kề trước nhất (ví dụ: lấy dữ liệu của iMac M4 khi làm iMac M6; iPad M4 khi làm iPad M5) để xem người dùng thực tế tìm kiếm bằng những cụm từ nào, cấu trúc ra sao và từ nào có Impression cao nhất.
+     - Giữ lại các cụm từ có Impression cao và khớp intent với sản phẩm mới.
+     - Quy ước gán Search Volume (VLS) là **5** cho các từ khóa này (để phân biệt với từ khóa bị loại hoàn toàn).
+
+3. **Gom nhóm dòng con và xác định "Bản tiêu chuẩn" (Standard Variant):**
+   - Gom các sản phẩm có chung một đặc tính bất kỳ vào một nhóm con (sub-group):
+     - Ví dụ nhóm GPU: 10-core GPU vs 12-core GPU.
+     - Ví dụ nhóm RAM: 16GB vs 24GB.
+     - Ví dụ nhóm Màn hình: Màn hình Nano-texture vs Màn hình tiêu chuẩn.
+   - **Bản tiêu chuẩn của nhóm:** Là SKU có **dung lượng/cấu hình thấp nhất (base model)** trong nhóm đó (thường là bản RAM thấp nhất hoặc SSD thấp nhất).
+   - **Gán từ khóa đại diện:** Bản tiêu chuẩn được quyền "sở hữu" các từ khóa đại diện bao quát của cả nhóm (ví dụ: `imac m6 16gb`, `imac m6 10 core gpu`, `imac m6 nano`) vì search intent của người dùng khi tìm kiếm nhóm này là muốn xem **giá khởi điểm / thấp nhất** của cấu hình đó.
+   - Các bản nâng cấp (Upgrade SKU - dung lượng cao hơn như 512GB, 1TB) sẽ sở hữu các từ khóa chi tiết theo đúng dung lượng cấu hình cao của chúng.
+
+4. **Quy tắc gán cờ `main` (Tick TRUE - Keyword chính):**
+   - **Mỗi sản phẩm phải có ít nhất 1 keyword được tick TRUE.**
+   - Điều kiện tick TRUE:
+     - Viết đúng chính tả tiếng Việt / có dấu, hoặc đúng tên gọi/cách viết thông dụng của người dùng (ví dụ: `iphone 18 promax` viết liền, `iphone gập`).
+     - Đúng thứ tự/quy ước đặt tên thương hiệu (không đảo ngữ lung tung).
+     - Search Volume $\ge 10$.
+     - Đối với sản phẩm mới chưa có Volume Ahrefs: Chọn 1 keyword đại diện có Impression cao nhất từ GSC của thế hệ trước và thật sự phù hợp nhất với sản phẩm/intent.
 
 ## 2. Hãng (`hang`) — bộ lọc intent nghiêm ngặt
 

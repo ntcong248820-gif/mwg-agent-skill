@@ -21,8 +21,8 @@ INTENT = re.compile(
     r"(?<!\w)(review|đánh giá|danh gia|so sánh|so sanh|vs|versus|specs?|specification|thông số|hướng dẫn|cách(?!\s*(?:âm|nhiệt|điện))|"
     r"how to|là gì|của nước nào|có tốt không|tốt không|driver|tải|download|cài đặt|firmware|lỗi|sửa chữa|"
     r"reset|mực in|hộp mực|đổ mực|crack|wiki|reddit|youtube|tin tức|release date|ngày ra mắt|notebookcheck|"
-    r"hdsd|thay pin|thay màn hình|hình ảnh|hình nền|wallpaper|các loại|video|test|screen|refresh|rate)(?!\w)|"
-    r"^(?:các|độ phân giải) |"
+    r"quy trình|thủ tục|nào|hdsd|thay pin|thay màn hình|hình ảnh|hình nền|wallpaper|các loại|video|test|screen|refresh|rate)(?!\w)|"
+    r"^(?:các|độ phân giải|dùng|sử dụng) |"
     r"(?<!chụp )(?<!máy )(?<!phim )(?<!film )(?<!in )(?<!\w)ảnh(?!\w)")
 INFO_DROP = re.compile(  # tầng 1: hỏi/tư vấn/sự cố -> người tìm không đang mua
     r"(?<!\w)(nên mua|nên chọn|đáng mua|đáng tiền|có nên|loại nào|nào tốt|nào ngon|nào bền|ưu nhược|ưu điểm|nhược điểm|"
@@ -39,7 +39,14 @@ RETAILER = re.compile(  # không lấy tên brand nhà bán lẻ làm keyword
     r"topzone|shopee|lazada|tiki)(?!\w)")
 NO_DIACRITIC_VI = re.compile(  # cụm tiếng Việt viết thiếu dấu (keyword tiếng Việt nên có dấu)
     r"(?<!\w)(man hinh|may tinh|may choi|choi game|cam tay|tay cam|dien thoai|gia re|ban phim|may in|"
-    r"may anh|may xach|chinh hang|do phan giai|may chieu|loa may tinh)(?!\w)")
+    r"may anh|may xach|chinh hang|do phan giai|may chieu|loa may tinh|so dep|nap tien|nap the|the cao|thanh toan|"
+    r"goi cuoc|bao hiem|tra gop|dong tien|o to|xe may|dien may)(?!\w)")
+# Âm tiết gần như luôn phải có dấu: keyword toàn không dấu chứa 1 trong các token này = tiếng Việt viết thiếu dấu.
+NEED_DIACRITIC = {"dien", "thoai", "hinh", "tinh", "chinh", "gia", "dep", "nap", "tien", "thanh", "toan", "nuoc",
+                  "cuoc", "hiem", "gop", "giat", "lanh", "quat", "phim", "nhat", "khoan", "bep", "noi", "dong"}
+# Intent blog viết không dấu (INTENT chỉ bắt bản có dấu; không bóc dấu cả INTENT vì "tải" -> "tai" trùng "tai nghe").
+INTENT_NO_DIACRITIC = re.compile(
+    r"(?<!\w)(huong dan|quy trinh|thu tuc|nao|cach|la gi|cai dat|sua chua|thong so|co tot khong|tot khong|ngay ra mat|tin tuc)(?!\w)")
 # Chỉ áp cho trang filter ngành hàng: từ trỏ riêng tới 1 hãng/dòng/nền tảng -> thuộc trang hãng/dòng, không phải filter.
 FILTER_ENTITIES = {"rog", "omen", "legion", "thinkpad", "predator", "nitro", "tuf", "alienware", "kuycon", "nintendo", "switch",
                    "ps5", "ps4", "playstation", "xbox", "steam", "ally", "claw", "android", "ideapad", "vivobook", "zenbook",
@@ -72,6 +79,12 @@ def strip_diacritics(text: str) -> str:
 
 def has_diacritics(text: str) -> bool:
     return strip_diacritics(text) != text
+
+
+def missing_diacritics(kw: str) -> bool:
+    """Keyword tiếng Việt viết thiếu dấu (vd 'man hinh', 'sim so dep'): vẫn giữ nhưng KHÔNG làm KW chính."""
+    kw = normalize(kw)
+    return not has_diacritics(kw) and bool(NO_DIACRITIC_VI.search(kw) or tokens(kw) & NEED_DIACRITIC)
 
 
 def normalize(kw: str) -> str:
@@ -126,14 +139,12 @@ def classify(kw: str, ctx: dict) -> tuple[str, str]:
     kw_t = ws_tokens(kw)
     if len(kw) < 3:
         return "drop", "quá ngắn"
-    if INTENT.search(kw):
+    if INTENT.search(kw) or (not has_diacritics(kw) and INTENT_NO_DIACRITIC.search(kw)):
         return "drop", "intent blog/review/hỗ trợ"
     if INFO_DROP.search(kw):
         return "drop", "intent hỏi/tư vấn/sự cố (blog)"
     if RETAILER.search(kw):
         return "drop", "tên nhà bán lẻ"
-    if not has_diacritics(kw) and NO_DIACRITIC_VI.search(kw):
-        return "drop", "tiếng Việt thiếu dấu"
     if YEAR.search(kw) and kind == "hang" and not YEAR.search(ctx_text(ctx)):
         return "drop", "năm (xu hướng/tin tức)"
     off = [b for b in kw_t & BRANDS if not brand_allowed(b, ctx_t)]
@@ -206,8 +217,8 @@ def _filter(kw: str, kw_t: set[str], ctx: dict, ctx_t: set[str]) -> tuple[str, s
     if OUT_OF_PATTERN.search(kw):
         return "review", "dạng chưa từng được duyệt (cũ/địa danh/best/top/tiếng Anh)"
     need = [t for t in tokens(ctx.get("filter", "")) if t not in GENERIC and (len(t) > 1 or t.isdigit())]
-    flat = kw.replace(" ", "")
-    if need and not any(t in flat for t in need):
+    flat = strip_diacritics(kw.replace(" ", ""))   # so không dấu: 'man hinh cam ung' vẫn khớp filter 'cảm ứng'
+    if need and not any(strip_diacritics(t) in flat for t in need):
         return "review", "không chứa thuộc tính của filter"
     if extra:
         return "review", f"thông số khác filter: {sorted(extra)[0]}"

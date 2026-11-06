@@ -1,6 +1,7 @@
 import sys, pathlib, unittest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
-from kw_rules import classify
+from kw_rules import classify, missing_diacritics
+from filter_keywords import assign_main
 
 
 def v(kw, ctx):
@@ -80,9 +81,46 @@ class FilterCaseMoi(unittest.TestCase):
 class RuleTuKhoa(unittest.TestCase):
     CTX = {"type": "nh", "nganh": "màn hình máy tính", "filter": "5K"}
 
-    def test_thieu_dau_bi_loai(self):
-        self.assertEqual(classify("man hinh 5k", self.CTX)[0], "drop")
+    def test_thieu_dau_van_giu_nhung_khong_phai_kw_chinh(self):
+        self.assertEqual(classify("man hinh 5k", self.CTX)[0], "keep")
         self.assertEqual(classify("màn hình 5k", self.CTX)[0], "keep")
+        self.assertTrue(missing_diacritics("man hinh 5k"))
+        self.assertTrue(missing_diacritics("sim so dep"))
+        self.assertFalse(missing_diacritics("màn hình 5k"))
+        self.assertFalse(missing_diacritics("laptop 300hz"))
+        self.assertFalse(missing_diacritics("tai nghe bluetooth"))
+        keep = [{"keyword": "man hinh 5k", "reason": "", "volume_sheet": 500},
+                {"keyword": "màn hình 5k", "reason": "", "volume_sheet": 500}]
+        assign_main(self.CTX, keep)
+        self.assertEqual([k["main"] for k in keep], [False, True])
+
+    def test_kw_chinh_can_volume_tu_10(self):
+        keep = [{"keyword": "màn hình 5k", "reason": "", "volume_sheet": v} for v in (5, 9, 10, 1000)]
+        assign_main(self.CTX, keep)
+        self.assertEqual([k["main"] for k in keep], [False, False, True, True])
+        keep = [{"keyword": "man hinh 5k", "reason": "", "volume_sheet": 5}]
+        assign_main(self.CTX, keep)
+        self.assertIn("volume < 10 + thiếu dấu", keep[0]["reason"])
+
+    def test_thieu_dau_khop_filter_tieng_viet(self):
+        ctx = {"type": "nh", "nganh": "màn hình máy tính", "filter": "cảm ứng"}
+        self.assertEqual(classify("man hinh cam ung", ctx)[0], "keep")
+
+    def test_quy_trinh_thu_tuc_nao_la_he_tin(self):
+        ctx = {"type": "nh", "nganh": "thanh toán viện phí", "filter": ""}
+        for kw in ("quy trình thanh toán viện phí", "thủ tục thanh toán viện phí bảo hiểm",
+                   "đặt vé máy bay thời điểm nào là rẻ nhất", "quy trinh thanh toan vien phi"):
+            self.assertEqual(classify(kw, ctx)[0], "drop", kw)
+        self.assertEqual(classify("thanh toán viện phí", ctx)[0], "keep")
+
+    def test_dung_su_dung_mo_dau_la_he_tin(self):
+        ctx = {"type": "nh", "nganh": "esim du lịch", "filter": ""}
+        for kw in ("dùng esim đi nước ngoài", "dùng esim khi đi nước ngoài", "sử dụng esim ở nước ngoài"):
+            self.assertEqual(classify(kw, ctx)[0], "drop", kw)
+        self.assertEqual(classify("mua esim quốc tế", ctx)[0], "keep")
+
+    def test_intent_blog_khong_dau_van_bi_loai(self):
+        self.assertEqual(classify("cach chinh man hinh 5k", self.CTX)[0], "drop")
 
     def test_tu_khong_dau_hop_le_van_giu(self):
         self.assertEqual(classify("laptop 300hz", {"type": "nh", "nganh": "laptop", "filter": "300 hz"})[0], "keep")

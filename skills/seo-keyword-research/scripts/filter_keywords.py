@@ -19,17 +19,33 @@ import json
 import sys
 from collections import defaultdict
 
-from kw_rules import classify, dedupe, normalize
+from kw_rules import classify, dedupe, missing_diacritics, normalize
 
 
 def sheet_volume(v) -> int:
     return 5 if not v else int(v)
 
 
+MAIN_MIN_VOLUME = 10
+
+
+def main_reason(it: dict) -> str:
+    """Rỗng nếu đủ điều kiện tick KW chính (TRUE); ngược lại trả lý do không tick."""
+    why = []
+    if it["volume_sheet"] < MAIN_MIN_VOLUME:   # volume_sheet=5 là nhóm 0-10/không có số liệu
+        why.append(f"volume < {MAIN_MIN_VOLUME}")
+    if missing_diacritics(it["keyword"]):
+        why.append("thiếu dấu")
+    return " + ".join(why)
+
+
 def assign_main(ctx: dict, keep: list[dict]) -> None:
-    """Gán cờ KW chính. Mặc định mọi keyword giữ lại đều True; sửa ở đây nếu bạn muốn chọn riêng một keyword chính."""
+    """KW chính (TRUE) khi: volume search >= 10 VÀ tiếng Việt đúng chính tả (có dấu). Ngược lại vẫn giữ keyword nhưng main=False."""
     for it in keep:
-        it["main"] = True
+        why = main_reason(it)
+        it["main"] = not why
+        if why:
+            it["reason"] += f" · không phải KW chính ({why})"
 
 
 def existing_keywords(path: str) -> dict[str, list[str]]:

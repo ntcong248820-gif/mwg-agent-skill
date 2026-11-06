@@ -101,6 +101,11 @@ Dùng làm ground truth để calibrate logic chọn đoạn văn.
 
 ## Pattern Summary
 
+> Ghi chú v3.0.0: bộ ví dụ này có từ trước khi đồng bộ n8n, chọn theo "pos nhỏ nhất".
+> Rule hiện hành (`branch-and-matching-rules.md` mục 5): keyword phải đứng độc lập, không tách cụm tên dài hơn,
+> không gắn vào chữ đã có link hoặc câu trong infobox, chọn câu ngữ cảnh liên quan nhất và cân quota vùng.
+> Dòng 423 (chọn sapo H2) **không còn hợp lệ** cho câu mới; với insertText vẫn được nếu câu sapo là câu duy nhất an toàn.
+
 | Rule | Trường hợp |
 | --- | --- |
 | Ưu tiên `<p>` pos nhỏ nhất | 11/14 dòng |
