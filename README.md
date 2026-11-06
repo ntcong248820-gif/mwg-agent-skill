@@ -37,6 +37,7 @@ Mỗi skill là một thư mục có `SKILL.md` (chỉ dẫn) và tuỳ chọn `
 | [`viet-bao-PR`](skills/viet-bao-PR) | Viết mới/viết lại bài PR báo điện tử và GuestPost cho mọi dự án TGDĐ, TopZone, ĐMX: đọc sheet plan, tạo Drive/Doc, research theo thứ bậc nguồn, văn phong báo chí, chèn anchor, verify, cập nhật sheet | Google Workspace CLI |
 | [`duyet-bao-PR`](skills/duyet-bao-PR) | Duyệt bài PR báo điện tử/GuestPost (Google Doc): đối chiếu sheet plan và KW, chạy checklist title/sapo/anchor/fact/giá live/ảnh, tự sửa lỗi rõ ràng, báo cáo từng bài | Google Workspace CLI |
 | [`fresh-content`](skills/fresh-content) | Làm mới bài content HTML đang chạy trên TGDĐ/ĐMX/TopZone: check giá và khuyến mãi live, sửa chính tả/factual, rải kw GSC chưa có (chỉ thêm, không sửa kw cũ), bổ sung FAQ và bài liên quan | Python 3.9+, GSC MCP |
+| [`toi-uu-content-sp-outdate`](skills/toi-uu-content-sp-outdate) | Tối ưu bài infobox sản phẩm đã cũ (Apple/TGDĐ): bỏ nội dung mở bán/đặt trước, verify giá sống từ link SP, sapo AIO có ngày ra mắt, đưa "giá bao nhiêu?" lên đầu, gom H3 thành khối "có nên mua", viết lại mục mua tại TGDĐ, FAQ, kết bài, đánh số heading, giữ nguyên link nội bộ | Claude, tranh-van-phong-ai |
 
 ### Bộ Rule Infobox TGDD
 
